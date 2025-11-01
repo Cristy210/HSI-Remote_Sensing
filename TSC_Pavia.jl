@@ -119,7 +119,7 @@ bg_indices = findall(gt_data .== 0)
 
 # ╔═╡ 77ec0819-7c35-46ca-ab4e-2f66d719a8a5
 md"""
-### Defining mask to remove the background pixels, i.e., pixels labeled zero
+### Define mask to remove the background pixels, i.e., pixels labeled zero
 """
 
 # ╔═╡ eef28252-7264-4970-90b2-60737c610e29
