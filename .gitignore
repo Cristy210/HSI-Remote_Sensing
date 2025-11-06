@@ -1,6 +1,7 @@
 /MAT Files
 /GT Files
 /cache_files
+/KSS/__pycache__/
 
 # Ignore Jupyter notebook checkpoints
 .ipynb_checkpoints/
