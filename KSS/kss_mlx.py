@@ -42,7 +42,7 @@ class KSS:
     max_iter = int, default=100
         Maximum number of iterations.
     n_int = int, default=10
-        Number of random initializations. The best run (Highest objective) is kept
+        Number of random initializations. The best run (Highest cost) is kept
     verbose = int, default=0
         Verbosity level. 0=Silent, 1=per-run messsages, 2=per-iter bar.
     random_state = int, default=None
@@ -108,9 +108,9 @@ class KSS:
         return X_mlx, n_features, n_samples
     
     @staticmethod
-    def _objective(U: Sequence[Array], X:Array, labels: np.ndarray) -> float:
+    def _cost(U: Sequence[Array], X:Array, labels: np.ndarray) -> float:
         """
-        Compute objective: sum over i of ||U_k^T x_i||^2 for assigned cluster k.
+        Compute cost: sum over i of ||U_k^T x_i||^2 for assigned cluster k.
         """
 
         K = len(U)
@@ -204,8 +204,8 @@ class KSS:
                 break
             labels_prev = labels.copy()
 
-        # Compute final objective
-        cost = self._objective(U, X, labels)
+        # Compute final cost
+        cost = self._cost(U, X, labels)
 
         return U, labels, cost
 
