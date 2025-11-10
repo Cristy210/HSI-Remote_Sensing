@@ -2,6 +2,8 @@
 /GT Files
 /cache_files
 /KSS/__pycache__/
+Salinas.jl
+Local TestFiles/
 
 # Ignore Jupyter notebook checkpoints
 .ipynb_checkpoints/
