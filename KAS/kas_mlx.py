@@ -104,15 +104,23 @@ class KAS:
         """
 
         if isinstance(X, mx.array):
-            return X
-        
-        X_np = np.asarray(X, dtype=np.float32)
+            X_mx = X if X.dtype == mx.float32 else mx.astype(X, mx.float32)
+            if X_mx.shape[0] >= X_mx.shape[1]:
+                X_mx = X_mx.T
+            return X_mx
+
+        if isinstance(X, np.ndarray):
+            X_np = X.astype(np.float32, copy=False)
+        else:
+            X_np = np.asarray(X, dtype=np.float32)
+
         if X_np.ndim != 2:
-            raise ValueError(f"Input data X must be 2D (n_features, n_samples).")
-        
-        
-        X_mlx = mx.array(X_np.T, dtype=mx.float32)
-        return X_mlx
+            raise ValueError("Input data X must be 2D.")
+
+        n_rows, n_cols = X_np.shape
+        # transpose only if rows >= cols (typical for (N, D))
+        X_mx = mx.array(X_np.T if n_rows >= n_cols else X_np, dtype=mx.float32)
+        return X_mx
     
     @staticmethod
     def _scores(U:Sequence[Array], b: Sequence[Array], X:Array) -> Array:
@@ -121,13 +129,12 @@ class KAS:
         """
         scores = mx.stack([
             mx.sum((X - b_k[:, None])**2, axis=0) -
-            mx.sum(mx.matmul(U_k.T, X - b_k[:, None])**2, axis=0)
+            mx.sum(mx.matmul(U_k.T, X - b_k[:, None], stream=mx.gpu)**2, axis=0)
             for U_k, b_k in zip(U, b)], axis=0)
         return np.array(scores)
     
     @staticmethod
     def _cost(U: Sequence[Array], b: Sequence[Array], X:Array, labels: np.ndarray) -> float:
-        
         """
         Compute cost: sum over i of ||x_i - b_k||^2 - (Uk*U_k^T (x_i - b_k))||^2 
         for assigned cluster k.
@@ -181,10 +188,6 @@ class KAS:
             b.append(bk)
 
         # Initial cluster assignment
-        # scores = mx.stack([
-        #     mx.sum((X - b_k[:, None])**2, axis=0) -
-        #     mx.sum(mx.matmul(U_k.T, (X - b_k[:, None]), stream=mx.cpu)**2, axis=0)
-        #     for U_k, b_k in zip(U, b)], axis=0)
         labels = np.argmin(KAS._scores(U, b, X), axis=0).astype(np.int32)
         labels_prev = labels.copy()
 
@@ -208,10 +211,6 @@ class KAS:
                 U[k], b[k] = affine_approx(Xk, d[k])
             
             # Update clusters
-            # scores = mx.stack([
-            #     mx.sum((X - b_k[:, None])**2, axis=0) -
-            #     mx.sum(mx.matmul(U_k.T, (X - b_k[:, None]), stream=mx.gpu)**2, axis=0)
-            #     for U_k, b_k in zip(U, b)], axis=0)
             labels = np.argmin(KAS._scores(U, b, X), axis=0).astype(np.int32)
 
             # Break if clusters did not change, update otherwise
@@ -299,7 +298,7 @@ class KAS:
 
         Parameters
         ----------
-        X : array-like of shape (n_samples, n_features) or MLX array (D, N)
+        X : array-like of shape (n_features, n_samples) or MLX array (D, N)
 
         Returns
         -------
@@ -313,11 +312,6 @@ class KAS:
         X_mx = self._to_mlx_column_major(X)
         U = self.affinespaces_
         b = self.offsets_
-
-        # scores = mx.stack([
-        #     mx.sum((X_mx - b_k[:, None])**2, axis=0) -
-        #     mx.sum(mx.matmul(U_k.T, (X_mx - b_k[:, None]), stream=mx.gpu)**2, axis=0)
-        #     for U_k, b_k in zip(U, b)], axis=0)
 
         labels = np.argmin(KAS._scores(U, b, X_mx), axis=0).astype(np.int32) + 1
         return labels
