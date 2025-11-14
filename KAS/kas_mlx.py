@@ -64,6 +64,7 @@ class KAS:
         n_init:int=10,
         verbose:int=0,
         random_state:Optional[int]=None,
+        score_batch_size:Optional[int]=4096,
     ) -> None:
         
         self.n_clusters = int(n_clusters)
@@ -72,6 +73,7 @@ class KAS:
         self.n_init = int(n_init)
         self.verbose = int(verbose)
         self.random_state = random_state
+        self.score_batch_size = None if score_batch_size is None else int(score_batch_size)
 
         # attributes filled by fit()
         self.labels_:Optional[np.ndarray] = None
@@ -104,42 +106,78 @@ class KAS:
         """
 
         if isinstance(X, mx.array):
-            X_mx = X if X.dtype == mx.float32 else mx.astype(X, mx.float32)
+            X_mx = X if X.dtype == mx.float16 else mx.astype(X, mx.float16)
             if X_mx.shape[0] >= X_mx.shape[1]:
                 X_mx = X_mx.T
             return X_mx
 
         if isinstance(X, np.ndarray):
-            X_np = X.astype(np.float32, copy=False)
+            X_np = X.astype(np.float16, copy=False)
         else:
-            X_np = np.asarray(X, dtype=np.float32)
+            X_np = np.asarray(X, dtype=np.float16)
 
         if X_np.ndim != 2:
             raise ValueError("Input data X must be 2D.")
 
         n_rows, n_cols = X_np.shape
         # transpose only if rows >= cols (typical for (N, D))
-        X_mx = mx.array(X_np.T if n_rows >= n_cols else X_np, dtype=mx.float32)
+        X_mx = mx.array(X_np.T if n_rows >= n_cols else X_np, dtype=mx.float16)
         return X_mx
     
     @staticmethod
-    def _scores(U:Sequence[Array], b: Sequence[Array], X:Array) -> Array:
+    def _scores(
+        U:Sequence[Array],
+        b: Sequence[Array],
+        X:Array,
+        batch_size:Optional[int]=None,
+    ) -> Array:
         """
-        Returns squared residual distances
+        Returns squared residual distances computed in batches to avoid
+        materializing the entire (K, N) score matrix on accelerators.
         """
-        scores = mx.stack([
-            mx.sum((X - b_k[:, None])**2, axis=0) -
-            mx.sum(mx.matmul(U_k.T, X - b_k[:, None], stream=mx.gpu)**2, axis=0)
-            for U_k, b_k in zip(U, b)], axis=0)
-        return np.array(scores)
+        K = len(U)
+        _, N = X.shape
+        batch = N if batch_size is None else max(1, min(batch_size, N))
+
+        scores = np.empty((K, N), dtype=np.float16)
+        # Precompute cluster-specific constants once.
+        cluster_cache = []
+        for U_k, b_k in zip(U, b):
+            b_norm_sq = float(mx.sum(b_k * b_k))
+            Ub = mx.matmul(U_k.T, b_k[:, None], stream=mx.gpu)
+            cluster_cache.append((b_norm_sq, Ub))
+
+        for start in range(0, N, batch):
+            end = min(N, start + batch)
+            X_batch = X[:, start:end]
+            x_sq_batch = mx.sum(X_batch * X_batch, axis=0)
+
+            for k, (U_k, b_k) in enumerate(zip(U, b)):
+                b_norm_sq, Ub = cluster_cache[k]
+                # First term: ||x||^2 - 2 b^T x + ||b||^2
+                bTx = mx.sum(X_batch * b_k[:, None], axis=0)
+                # Second term: ||U^T(x - b)||^2 = ||U^T x - U^T b||^2
+                proj = mx.matmul(U_k.T, X_batch) - Ub
+                proj_norm_sq = mx.sum(proj * proj, axis=0)
+
+                residual = x_sq_batch - 2.0 * bTx + b_norm_sq - proj_norm_sq
+                scores[k, start:end] = np.array(residual, copy=False)
+
+        return scores
     
     @staticmethod
-    def _cost(U: Sequence[Array], b: Sequence[Array], X:Array, labels: np.ndarray) -> float:
+    def _cost(
+        U: Sequence[Array],
+        b: Sequence[Array],
+        X:Array,
+        labels: np.ndarray,
+        batch_size:Optional[int]=None,
+    ) -> float:
         """
         Compute cost: sum over i of ||x_i - b_k||^2 - (Uk*U_k^T (x_i - b_k))||^2 
         for assigned cluster k.
         """
-        scores = KAS._scores(U, b, X)
+        scores = KAS._scores(U, b, X, batch_size=batch_size)
 
         # c0 = labels
         return float(scores[labels, np.arange(scores.shape[1])].sum())
@@ -188,7 +226,8 @@ class KAS:
             b.append(bk)
 
         # Initial cluster assignment
-        labels = np.argmin(KAS._scores(U, b, X), axis=0).astype(np.int32)
+        init_scores = KAS._scores(U, b, X, batch_size=self.score_batch_size)
+        labels = np.argmin(init_scores, axis=0).astype(np.int32)
         labels_prev = labels.copy()
 
         # Iterations
@@ -211,7 +250,8 @@ class KAS:
                 U[k], b[k] = affine_approx(Xk, d[k])
             
             # Update clusters
-            labels = np.argmin(KAS._scores(U, b, X), axis=0).astype(np.int32)
+            scores = KAS._scores(U, b, X, batch_size=self.score_batch_size)
+            labels = np.argmin(scores, axis=0).astype(np.int32)
 
             # Break if clusters did not change, update otherwise
             if np.array_equal(labels, labels_prev):
@@ -221,7 +261,7 @@ class KAS:
             labels_prev = labels.copy()
         
         # Compute final cost
-        cost = self._cost(U, b, X, labels)
+        cost = self._cost(U, b, X, labels, batch_size=self.score_batch_size)
         return U, b, labels, cost
     
     # Public API
@@ -313,7 +353,8 @@ class KAS:
         U = self.affinespaces_
         b = self.offsets_
 
-        labels = np.argmin(KAS._scores(U, b, X_mx), axis=0).astype(np.int32) + 1
+        scores = KAS._scores(U, b, X_mx, batch_size=self.score_batch_size)
+        labels = np.argmin(scores, axis=0).astype(np.int32) + 1
         return labels
 
 
@@ -322,4 +363,3 @@ class KAS:
 
 
     
-
