@@ -67,6 +67,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#matlab-k-subspaces-kss" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -420,6 +425,26 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
         
@@ -437,6 +462,47 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -467,6 +533,38 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -486,9 +584,25 @@
   
 
 
-  <h1>Overview</h1>
+<h1 id="matlab-k-subspaces-kss">MATLAB K-Subspaces (KSS)<a class="headerlink" href="#matlab-k-subspaces-kss" title="Permanent link">&para;</a></h1>
+<p>The MATLAB implementation of the K-Subspaces algorithm is provided in the
+<code>KSS_MATLAB</code> folder.</p>
+<h2 id="files">Files<a class="headerlink" href="#files" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>kss.m</code> – core KSS algorithm (D × N data matrix, K clusters, r-dimensional subspaces)</li>
+<li><code>kss_rs.m</code> – example script for running KSS on the Pavia dataset</li>
+</ul>
+<h2 id="example-usage">Example usage<a class="headerlink" href="#example-usage" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code><span class="nb">addpath</span><span class="p">(</span><span class="s">&quot;KSS_MATLAB&quot;</span><span class="p">);</span>
 
+<span class="nb">load</span><span class="p">(</span><span class="s">&quot;MAT Files/Pavia.mat&quot;</span><span class="p">);</span>
+<span class="nb">load</span><span class="p">(</span><span class="s">&quot;GT Files/Pavia_gt.mat&quot;</span><span class="p">);</span>
 
+<span class="c">% X: D x N data matrix constructed from the cube</span>
+<span class="p">[</span><span class="n">U</span><span class="p">,</span><span class="w"> </span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="n">total_cost</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">kss</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="w"> </span><span class="n">K</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">);</span>
+
+<span class="c">% See kss_rs.m for a complete example on Pavia</span>
+</code></pre></div>
 
 
 
