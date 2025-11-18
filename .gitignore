@@ -9,3 +9,4 @@ Local TestFiles/
 .ipynb_checkpoints/
 */.ipynb_checkpoints/*
 *-checkpoint.ipynb
+site/
