@@ -1176,7 +1176,7 @@ random_state = int, default=None
 <span class="sd">        Convert input X to MLX array:</span>
 
 <span class="sd">        Accepts:</span>
-<span class="sd">            - Numpy Array of shape(n_samples, n_features)</span>
+<span class="sd">            - Numpy Array of shape(n_features, n_samples)</span>
 <span class="sd">            - MLX Array of shape (n_features, n_samples)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
@@ -1186,11 +1186,11 @@ random_state = int, default=None
 
         <span class="n">X_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">X_np</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input data X must be 2D (n_samples, n_features).&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input data X must be 2D (n_features, n_samples).&quot;</span><span class="p">)</span>
 
-        <span class="n">n_samples</span><span class="p">,</span> <span class="n">n_features</span> <span class="o">=</span> <span class="n">X_np</span><span class="o">.</span><span class="n">shape</span>
+
         <span class="n">X_mlx</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">X_np</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">mx</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">X_mlx</span><span class="p">,</span> <span class="n">n_features</span><span class="p">,</span> <span class="n">n_samples</span>
+        <span class="k">return</span> <span class="n">X_mlx</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_cost</span><span class="p">(</span><span class="n">U</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Array</span><span class="p">],</span> <span class="n">X</span><span class="p">:</span><span class="n">Array</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
@@ -1300,7 +1300,7 @@ random_state = int, default=None
 <span class="sd">        Compute K-Subspaces clustering.</span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        X : array-like of shape (n_samples, n_features) or MLX array (D, N)</span>
+<span class="sd">        X : array-like of shape (n_features, n_samples) or MLX array (D, N)</span>
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        self : KSS</span>
@@ -1348,7 +1348,7 @@ random_state = int, default=None
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        X : array-like of shape (n_samples, n_features) or MLX array (D, N)</span>
+<span class="sd">        X : array-like of shape (n_features, n_samples) or MLX array (D, N)</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1364,7 +1364,7 @@ random_state = int, default=None
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        X : array-like of shape (n_samples, n_features) or MLX array (D, N)</span>
+<span class="sd">        X : array-like of shape (n_features, n_samples) or MLX array (D, N)</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1419,7 +1419,7 @@ random_state = int, default=None
         <p>Compute K-Subspaces clustering.
 Parameters</p>
 <hr />
-<p>X : array-like of shape (n_samples, n_features) or MLX array (D, N)
+<p>X : array-like of shape (n_features, n_samples) or MLX array (D, N)
 Returns</p>
 <hr />
 <p>self : KSS
@@ -1478,7 +1478,7 @@ Returns</p>
 <span class="sd">    Compute K-Subspaces clustering.</span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    X : array-like of shape (n_samples, n_features) or MLX array (D, N)</span>
+<span class="sd">    X : array-like of shape (n_features, n_samples) or MLX array (D, N)</span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    self : KSS</span>
@@ -1538,7 +1538,7 @@ Returns</p>
 
         <p>Fit KSS and return labels.</p>
 <h4 id="KSS.kss_mlx.KSS.fit_predict--parameters">Parameters<a class="headerlink" href="#KSS.kss_mlx.KSS.fit_predict--parameters" title="Permanent link">&para;</a></h4>
-<p>X : array-like of shape (n_samples, n_features) or MLX array (D, N)</p>
+<p>X : array-like of shape (n_features, n_samples) or MLX array (D, N)</p>
 <h4 id="KSS.kss_mlx.KSS.fit_predict--returns">Returns<a class="headerlink" href="#KSS.kss_mlx.KSS.fit_predict--returns" title="Permanent link">&para;</a></h4>
 <p>labels: (n_samples, )
     Labels in {1, ..., n_clusters}.</p>
@@ -1566,7 +1566,7 @@ Returns</p>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    X : array-like of shape (n_samples, n_features) or MLX array (D, N)</span>
+<span class="sd">    X : array-like of shape (n_features, n_samples) or MLX array (D, N)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -1594,7 +1594,7 @@ Returns</p>
 
         <p>Predict the closest cluster each sample in X belongs to.</p>
 <h4 id="KSS.kss_mlx.KSS.predict--parameters">Parameters<a class="headerlink" href="#KSS.kss_mlx.KSS.predict--parameters" title="Permanent link">&para;</a></h4>
-<p>X : array-like of shape (n_samples, n_features) or MLX array (D, N)</p>
+<p>X : array-like of shape (n_features, n_samples) or MLX array (D, N)</p>
 <h4 id="KSS.kss_mlx.KSS.predict--returns">Returns<a class="headerlink" href="#KSS.kss_mlx.KSS.predict--returns" title="Permanent link">&para;</a></h4>
 <p>labels: (n_samples, )
     Labels in {1, ..., n_clusters}.</p>
@@ -1638,7 +1638,7 @@ Returns</p>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    X : array-like of shape (n_samples, n_features) or MLX array (D, N)</span>
+<span class="sd">    X : array-like of shape (n_features, n_samples) or MLX array (D, N)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
