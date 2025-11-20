@@ -21,3 +21,15 @@ load("GT Files/Pavia_gt.mat");
 
 % See kss_rs.m for a complete example on Pavia
 ```
+
+## MATLAB Live Script Demo
+
+You can view the full interactive clustering demo here:
+
+
+👉 [KSS Live Script (HTML)](KSS_MATLAB/KSS_HSI_Live.html)
+
+<!-- <iframe 
+    src="../KSS_MATLAB/KSS_HSI_Live.html"
+    style="width: 100%; height: 1200px; border: none; overflow: auto;"
+></iframe> -->
