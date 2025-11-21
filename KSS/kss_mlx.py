@@ -91,7 +91,7 @@ class KSS:
         Convert input X to MLX array:
 
         Accepts:
-            - Numpy Array of shape(n_samples, n_features)
+            - Numpy Array of shape(n_features, n_samples)
             - MLX Array of shape (n_features, n_samples)
         """
 
@@ -101,11 +101,11 @@ class KSS:
         
         X_np = np.asarray(X, dtype=np.float64)
         if X_np.ndim != 2:
-            raise ValueError("Input data X must be 2D (n_samples, n_features).")
+            raise ValueError("Input data X must be 2D (n_features, n_samples).")
         
-        n_samples, n_features = X_np.shape
+        
         X_mlx = mx.array(X_np.T, dtype=mx.float64)
-        return X_mlx, n_features, n_samples
+        return X_mlx
     
     @staticmethod
     def _cost(U: Sequence[Array], X:Array, labels: np.ndarray) -> float:
@@ -215,7 +215,7 @@ class KSS:
         Compute K-Subspaces clustering.
         Parameters
         ----------
-        X : array-like of shape (n_samples, n_features) or MLX array (D, N)
+        X : array-like of shape (n_features, n_samples) or MLX array (D, N)
         Returns
         -------
         self : KSS
@@ -263,7 +263,7 @@ class KSS:
 
         Parameters
         ----------
-        X : array-like of shape (n_samples, n_features) or MLX array (D, N)
+        X : array-like of shape (n_features, n_samples) or MLX array (D, N)
 
         Returns
         -------
@@ -279,7 +279,7 @@ class KSS:
 
         Parameters
         ----------
-        X : array-like of shape (n_samples, n_features) or MLX array (D, N)
+        X : array-like of shape (n_features, n_samples) or MLX array (D, N)
 
         Returns
         -------
