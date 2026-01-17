@@ -17,7 +17,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ eb33cfc1-58c4-4f34-a70c-a07928e02039
-import Pkg; Pkg.activate(@__DIR__)
+import Pkg; Pkg.activate(joinpath(@__DIR__, ".."))
 
 # ╔═╡ 58baac76-e492-4c7d-8d84-a5a571c81c7d
 using CairoMakie, LinearAlgebra, Colors, PlutoUI, Glob, FileIO, ArnoldiMethod, CacheVariables, Clustering, ProgressLogging, Dates, SparseArrays, Random, Logging, MAT
@@ -53,13 +53,13 @@ md"""
 @bind Location Select(["Pavia", "PaviaUni",])
 
 # ╔═╡ a23d06a4-e0de-458e-afe5-d7989342dc37
-filepath = joinpath(@__DIR__, "MAT Files", "$Location.mat")
+filepath = abspath(joinpath(@__DIR__, "..", "MAT Files", "$Location.mat"))
 
 # ╔═╡ 92620cae-f1bd-4864-a795-d2a8c8dbf16e
-gt_filepath = joinpath(@__DIR__, "GT Files", "$Location.mat")
+gt_filepath = abspath(joinpath(@__DIR__, "..", "GT Files", "$Location.mat"))
 
 # ╔═╡ c8376c69-f1e6-459f-aedd-766e2d84cb3a
-CACHEDIR = joinpath(@__DIR__, "cache_files", "Aerial Datasets")
+CACHEDIR = abspath(joinpath(@__DIR__, "..", "cache_files", "Aerial Datasets"))
 
 # ╔═╡ ba3ecda0-aa6b-46c3-80f4-eb8ab9a8a4bd
 md"""
@@ -364,7 +364,7 @@ with_theme() do
     end
 	Colorbar(fig[1, 2], hm)
 	fig
-end;
+end
 
 # ╔═╡ 0a6643cf-fd62-43e3-a427-e3b4b435d047
 relabel_maps = Dict(
@@ -479,7 +479,7 @@ end
 # ╠═a23d06a4-e0de-458e-afe5-d7989342dc37
 # ╠═92620cae-f1bd-4864-a795-d2a8c8dbf16e
 # ╠═c8376c69-f1e6-459f-aedd-766e2d84cb3a
-# ╠═ba3ecda0-aa6b-46c3-80f4-eb8ab9a8a4bd
+# ╟─ba3ecda0-aa6b-46c3-80f4-eb8ab9a8a4bd
 # ╠═683658a8-7fb4-4cf2-9af5-dea630aaf5d5
 # ╠═d6236062-97f9-45a5-96fc-54865dc7adfa
 # ╠═63d1a002-ee29-4e6c-99b5-33f0b035501b
