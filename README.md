@@ -37,6 +37,9 @@ HSI-Remote_Sensing/
 ├── KSS_MATLAB/             # MATLAB implementation
 │   ├── kss.m               # Core function
 │   ├── kss_rs.m            # Remote sensing dataset demo
+│ 
+├── KSS_Julia/              # Julia Implementation
+│   ├── kss.jl              # Core kss function   
 │
 ├── notebooks/              # Data loading and visualization notebooks
 ├── CITATIONS.md            # Dataset and paper references
