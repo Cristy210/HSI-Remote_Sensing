@@ -19,6 +19,8 @@ nav:
       - Overview: python-kss.md
   - MATLAB KSS:
       - Overview: matlab-kss.md
+  - Julia KSS:
+      - Overview: julia-kss.md
 
 plugins:
   - search
