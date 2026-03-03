@@ -4,6 +4,7 @@
 /KSS/__pycache__/
 Salinas.jl
 Local TestFiles/
+.vscode/
 
 # Ignore Jupyter notebook checkpoints
 .ipynb_checkpoints/
