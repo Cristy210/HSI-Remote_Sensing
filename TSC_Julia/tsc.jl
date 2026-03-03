@@ -34,7 +34,7 @@ end
         max_nz = max(4, cld(size(X, 2), max(1, K))),
         max_chunksize = 1000,
         rng = default_rng(),
-        kmeans_nruns = 10,
+        kmeans_nruns = 50,
         kmeans_opts = (;))
 
 Cluster the `N` data points in the `D×N` data matrix `X` into `K` clusters
@@ -53,7 +53,7 @@ via normalized spectral clustering of the graph.
 - `max_nz::Integer = max(4, cld(size(X, 2), max(1, K)))`: maximum number of neighbors
 - `max_chunksize::Integer = 1000`: chunk size used in [`tsc_affinity`](@ref)
 - `rng::AbstractRNG = default_rng()`: random number generator used by K-means
-- `kmeans_nruns::Integer = 10`: number of K-means runs to perform
+- `kmeans_nruns::Integer = 50`: number of K-means runs to perform
 - `kmeans_opts = (;)`: additional options for `kmeans`
 
 See also [`TSCResult`](@ref), [`tsc_affinity`](@ref), [`tsc_embedding`](@ref).
@@ -64,7 +64,7 @@ function tsc(
     max_nz::Integer = max(4, cld(size(X, 2), max(1, K))),
     max_chunksize::Integer = 1000,
     rng::AbstractRNG = default_rng(),
-    kmeans_nruns::Integer = 10,
+    kmeans_nruns::Integer = 50,
     kmeans_opts = (;),
 )
     # Validate arguments

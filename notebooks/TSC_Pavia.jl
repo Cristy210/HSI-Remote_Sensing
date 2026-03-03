@@ -316,6 +316,9 @@ aligned_assignments(clusterings, baseperm=1:maximum(first(clusterings).assignmen
 	return [new_labels[l] for l in clustering.assignments]
 end
 
+# ╔═╡ 771f302d-a1a0-4e00-93cd-edec33cf1774
+maximum(first(spec_clusterings).assignments)
+
 # ╔═╡ 5414cbcb-c322-4536-b9c3-edd9fca2ca11
 spec_aligned = aligned_assignments(spec_clusterings)
 
@@ -518,6 +521,7 @@ end
 # ╠═a8f26017-5e2a-4991-a840-68495ccece02
 # ╠═4d85331b-65bb-46fa-8a8f-3634ee7eacc9
 # ╠═d4cb1d09-890a-4c8a-a5d0-ddc8f6d166eb
+# ╠═771f302d-a1a0-4e00-93cd-edec33cf1774
 # ╠═5414cbcb-c322-4536-b9c3-edd9fca2ca11
 # ╟─6b6a0558-ada2-4193-a5f3-a4878421f914
 # ╠═d21295be-cbd5-4135-b2e3-7925ad133581
