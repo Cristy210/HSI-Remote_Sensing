@@ -263,11 +263,11 @@ function embedding(A, k; seed=0)
 	decomp, history = partialschur(L; nev=k, which=:SR)
 	@info history
 
-	return mapslices(normalize, decomp.Q; dims=2)
+	return mapslices(normalize, decomp.Q; dims=2), L
 end
 
 # ╔═╡ dae400bf-ea56-4ae8-9f0c-56ea45ef2652
-V = embedding(A, n_clusters)
+V, _ = embedding(A, n_clusters)
 
 # ╔═╡ 2d467a37-fcf8-4b63-8604-64216f64cb57
 md"""
@@ -468,6 +468,104 @@ with_theme() do
 	fig
 end
 
+# ╔═╡ 6d6b2d0e-1aed-4cb2-b4fe-898833e5792b
+md"""
+### Rough Work
+"""
+
+# ╔═╡ 4fda3771-da44-4def-a5c8-e08658ec517e
+_, L = embedding(A, n_clusters)
+
+# ╔═╡ c17132dc-26e4-4a47-a96e-ac870e5d83e5
+kmax = 50
+
+# ╔═╡ b386f8ea-7a7d-4686-9c6a-1fe01bad2bfe
+decomp, history = partialschur(L; nev=kmax, which=:SR)
+
+# ╔═╡ 693eb74b-3580-4705-a35c-b876fe0357a7
+eigen_values, V_part = partialeigen(decomp)
+
+# ╔═╡ bd003cc8-87c2-4085-a8d7-c89b99ca7394
+V2 = decomp.Q[:, 1:17]
+
+# ╔═╡ ab5f265e-b47c-400a-9a5a-042285473bfc
+diff(eigen_values)
+
+# ╔═╡ f30483c9-2a49-4e9d-ad7c-8acd0e24dc1d
+argmax(diff(eigen_values))
+
+# ╔═╡ 720533b6-3a14-4352-a9ce-3629279be981
+V1 = V_part[:, 1:argmax(diff(eigen_values))]
+
+# ╔═╡ 5f9a2c3f-d216-4df0-856c-00b946d6995b
+V1 == V2
+
+# ╔═╡ 6025c843-2801-442d-94f8-f9bdab1d36a3
+U, σ, Vt = svd(V1' * V2)
+
+# ╔═╡ d9e718ec-86e8-4b27-a989-e6e5bcdf7dcc
+U*Vt'
+
+# ╔═╡ 5ae940f7-9bc3-4878-8312-f8ceefac672f
+# norm(V1*V1' - V2*V2')
+
+# ╔═╡ 17c587aa-15d9-41a4-8246-6a0e10e53f11
+decomp.eigenvalues
+
+# ╔═╡ b8cad249-55fd-4f08-8256-a6a9264464f8
+R_Vector = [1, 2, 3, 6, 9, 11, 20, 30, 31, 32]
+
+# ╔═╡ 69d0fe93-7be2-47de-88bf-1371dc8ad10b
+diff(R_Vector)
+
+# ╔═╡ c6bc35d2-52c9-43bb-8975-4cac72645ee2
+function estimateK_from_L(L; kmax=50)
+    decomp, _ = partialschur(L; nev=kmax, which=:SR)
+    λ, _ = partialeigen(decomp)          # you already use this
+    λ = sort(real.(λ))
+    return argmax(diff(λ)), λ
+end
+
+# ╔═╡ 6823f6e8-3437-4d30-aec7-8d23d83c6b4b
+# for kmax in (30, 50, 80, 120, 200)
+#     Khat, _ = estimateK_from_L(L; kmax=kmax)
+#     @info "kmax=$kmax -> Khat=$Khat"
+# end
+
+# ╔═╡ d940bee3-bf94-4dde-b61c-b17759b2c61c
+function tsc_embedding(A; K::Union{Nothing,Integer}=nothing, kmax::Integer=100)
+    # Compute node degrees and form Laplacian matrix `L` from `A`
+    D = Diagonal(vec(sum(A; dims = 2)))
+    L = Symmetric(I - (inv(sqrt(D)) * A * inv(sqrt(D))))
+
+    # Choose `K`
+    # Kfinal::Int
+    if K === nothing
+        nev = min(kmax, N-1)
+        nev >= 2 || throw(ArgumentError("`kmax` must be at least 2 (got $kmax)."))
+
+        # Eigen values of the normalized Laplacian matrix, `L` to find the eigengap
+        decomp, history = partialschur(L; nev=nev, which=:SR)
+        history.converged || @warn "Iterative algorithm for eigenvectors did not converge - results may be inaccurate."
+        Eigen_values, _ = partialeigen(decomp)
+        Kfinal = argmax(diff(Eigen_values))
+
+        # Recompute eigen vectors for chosen `K`
+        decomp, history = partialschur(L; nev=Kfinal, which=:SR)
+        history.converged || @warn "Iterative algorithm for eigenvectors did not converge - results may be inaccurate."
+    else
+        # Kfinal = Int(K)
+        decomp, history = partialschur(L; nev=K, which=:SR)
+        history.converged || @warn "Iterative algorithm for eigenvectors did not converge - results may be inaccurate."
+    end
+
+    # Permute and normalize to obtain embeddings
+    E = mapslices(normalize, permutedims(decomp.Q); dims = 1)
+
+    # Return the embeddings
+    return E
+end
+
 # ╔═╡ Cell order:
 # ╟─0bdfe2ea-7c33-11f0-3423-e9a930a7eff5
 # ╟─4ab3db82-595e-4cba-99e3-651b069ba7d9
@@ -529,3 +627,22 @@ end
 # ╟─9c2d52df-5704-4542-b237-0ed299bf51f6
 # ╠═6859158c-1078-4c1a-8cd0-28e31329cf46
 # ╠═62e7fc9b-180a-44d1-bc77-fbd48b49d58b
+# ╟─6d6b2d0e-1aed-4cb2-b4fe-898833e5792b
+# ╠═4fda3771-da44-4def-a5c8-e08658ec517e
+# ╠═c17132dc-26e4-4a47-a96e-ac870e5d83e5
+# ╠═b386f8ea-7a7d-4686-9c6a-1fe01bad2bfe
+# ╠═693eb74b-3580-4705-a35c-b876fe0357a7
+# ╠═bd003cc8-87c2-4085-a8d7-c89b99ca7394
+# ╠═ab5f265e-b47c-400a-9a5a-042285473bfc
+# ╠═f30483c9-2a49-4e9d-ad7c-8acd0e24dc1d
+# ╠═720533b6-3a14-4352-a9ce-3629279be981
+# ╠═5f9a2c3f-d216-4df0-856c-00b946d6995b
+# ╠═6025c843-2801-442d-94f8-f9bdab1d36a3
+# ╠═d9e718ec-86e8-4b27-a989-e6e5bcdf7dcc
+# ╠═5ae940f7-9bc3-4878-8312-f8ceefac672f
+# ╠═17c587aa-15d9-41a4-8246-6a0e10e53f11
+# ╠═b8cad249-55fd-4f08-8256-a6a9264464f8
+# ╠═69d0fe93-7be2-47de-88bf-1371dc8ad10b
+# ╠═c6bc35d2-52c9-43bb-8975-4cac72645ee2
+# ╠═6823f6e8-3437-4d30-aec7-8d23d83c6b4b
+# ╠═d940bee3-bf94-4dde-b61c-b17759b2c61c
