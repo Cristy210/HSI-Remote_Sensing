@@ -21,6 +21,8 @@ nav:
       - Overview: matlab-kss.md
   - Julia KSS:
       - Overview: julia-kss.md
+  - Python TSC:
+      - Overview: python-tsc.md
 
 plugins:
   - search
