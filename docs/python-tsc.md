@@ -7,3 +7,9 @@ An additional MLX-based implementation is available in `TSC_Python/tsc_mlx.py` f
 ## TSC class
 
 ::: TSC_Python.tsc.TSC
+
+## Example usage
+
+The following embedded notebook shows an example of running the TSC algorithm on the Pavia dataset.
+
+👉 [TSC Implementation (HTML)](TSC_Python/Python_TSC.html)
