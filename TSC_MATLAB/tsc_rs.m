@@ -26,7 +26,7 @@ X_full = X_full.';
 X = X_full(:, mask_vec);
 
 % Run TSC on the filtered out pixels
-[A, E, EigVals, c, K_used] = tsc(X, K, 'Verbose', true);
+[A, E, EigVals, c, K_used] = tsc(X, K, 'Verbose', true, 'MaxNZ', 50);
 
 % Map cluster labels back to image grid (H x W)
 c_image_vec = zeros(H*W, 1);
