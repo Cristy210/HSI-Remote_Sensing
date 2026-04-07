@@ -46,6 +46,10 @@ HSI-Remote_Sensing/
 │    ├── tsc_mlx.py         # TSC Implementation using MLX framework
 │    ├── __init__.py        # Module init file 
 │
+├── TSC_MATLAB/            # MATLAB implementation
+│    ├── tsc.m               # Core function
+│    ├── tsc_rs.m            # Remote sensing dataset demo
+│
 ├── notebooks/              # Data loading and visualization notebooks
 ├── CITATIONS.md            # Dataset and paper references
 ├── env.yml                 # Conda environment configuration
