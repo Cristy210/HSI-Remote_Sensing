@@ -8,7 +8,7 @@ from tqdm.auto import trange
 
 Array = mx.array
 
-class KMeans:
+class KMeans_MLX:
     """
     K-Means Clustering using Apple MLX
 
