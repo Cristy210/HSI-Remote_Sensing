@@ -39,7 +39,16 @@ HSI-Remote_Sensing/
 │   ├── kss_rs.m            # Remote sensing dataset demo
 │ 
 ├── KSS_Julia/              # Julia Implementation
-│   ├── kss.jl              # Core kss function   
+│   ├── kss.jl              # Core kss function
+│
+├── TSC_Python/             # Python Implementation
+│    ├── tsc.py             # Core TSC Implementation
+│    ├── tsc_mlx.py         # TSC Implementation using MLX framework
+│    ├── __init__.py        # Module init file 
+│
+├── TSC_MATLAB/            # MATLAB implementation
+│    ├── tsc.m               # Core function
+│    ├── tsc_rs.m            # Remote sensing dataset demo
 │
 ├── notebooks/              # Data loading and visualization notebooks
 ├── CITATIONS.md            # Dataset and paper references
