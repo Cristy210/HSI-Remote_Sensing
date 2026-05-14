@@ -22,6 +22,12 @@ import Pkg; Pkg.activate(joinpath(@__DIR__, ".."))
 # ╔═╡ 58baac76-e492-4c7d-8d84-a5a571c81c7d
 using CairoMakie, LinearAlgebra, Colors, PlutoUI, Glob, FileIO, ArnoldiMethod, CacheVariables, Clustering, ProgressLogging, Dates, SparseArrays, Random, Logging, MAT
 
+# ╔═╡ 0e14a739-a926-45b4-8df1-96090d257bfd
+begin
+    include(joinpath(@__DIR__, "..", "TSC_Julia", "tsc.jl"))
+    using .TSC
+end
+
 # ╔═╡ 0bdfe2ea-7c33-11f0-3423-e9a930a7eff5
 html"""<style>
 input[type*="range"] {
@@ -185,139 +191,37 @@ md"""
 ``\mathbf{L}_{\text{sym}} = \mathbf{I} - \mathbf{D}^{-1/2} \mathbf{A} \mathbf{D}^{-1/2}``
 """
 
+# ╔═╡ d4b67203-333b-45e0-91b2-4fa8d1a8ba78
+model = fit(data[mask, :]', n_clusters; max_nz=15)
+
+# ╔═╡ d61311e5-b471-44a8-9969-9ffbb713356e
+labels = model.assignments
+
 # ╔═╡ 56ae6711-4645-4981-81a5-4ddc5c5fc521
 
 
-# ╔═╡ 29242190-f547-4fe5-abcd-2dac57200163
-
-
-# ╔═╡ c9697307-e424-42e3-9e61-100e9d2eb61b
-md"""
-### Affinity Matrix
-"""
-
-# ╔═╡ 967709d5-ac33-4ec0-b2d2-c50d72dc8017
-begin
-function affinity(X::Matrix; max_nz=10, chunksize=isqrt(size(X,2)),
-	func = c -> exp(-2*acos(clamp(c,-1,1))))
-
-	# Compute normalized spectra (so that inner product = cosine of angle)
-	X = mapslices(normalize, X; dims=1)
-
-	# Find nonzero values (in chunks)
-	C_buf = similar(X, size(X,2), chunksize)    # pairwise cosine buffer
-	s_buf = Vector{Int}(undef, size(X,2))       # sorting buffer
-	nz_list = @withprogress mapreduce(vcat, enumerate(Iterators.partition(1:size(X,2), chunksize))) do (chunk_idx, chunk)
-		# Compute cosine angles (for chunk) and store in appropriate buffer
-		C_chunk = length(chunk) == chunksize ? C_buf : similar(X, size(X,2), length(chunk))
-		mul!(C_chunk, X', view(X, :, chunk))
-
-		# Zero out all but `max_nz` largest values
-		nzs = map(chunk, eachcol(C_chunk)) do col, c
-			idx = partialsortperm!(s_buf, c, 1:max_nz; rev=true)
-			collect(idx), fill(col, max_nz), func.(view(c,idx))
-		end
-
-		# Log progress and return
-		@logprogress chunk_idx/cld(size(X,2),chunksize)
-		return nzs
-	end
-
-	# Form and return sparse array
-	rows = reduce(vcat, getindex.(nz_list, 1))
-	cols = reduce(vcat, getindex.(nz_list, 2))
-	vals = reduce(vcat, getindex.(nz_list, 3))
-	return sparse([rows; cols],[cols; rows],[vals; vals])
-end
-affinity(cube::Array{<:Real,3}; kwargs...) =
-	affinity(permutedims(reshape(cube, :, size(cube,3))); kwargs...)
-end
-
-# ╔═╡ 4ce6a047-e4f8-41a2-9c4a-94643e8ce737
-
-
-# ╔═╡ efb0c7d5-28f3-44cc-a521-3bb1464da64a
-max_nz = 10
-
-# ╔═╡ 033d4da1-eba3-4c59-b945-2d59b81906e6
-A = cachet(joinpath(CACHEDIR, "Affinity_$Location$max_nz.bson")) do
-	affinity(permutedims(data[mask, :]); max_nz)
-end
-
-# ╔═╡ 8b2fa6e6-04ac-4b7b-a29c-f1c38dbcfdb1
-md"""
-#### Eigenvector embedding: Compute the `k` eigenvectors of the normalized Laplacian, where `k` equals the number of clusters.
-"""
-
-# ╔═╡ 0fa5a2ea-1a4d-4ed5-9ae1-a0a3280d0bfe
-function embedding(A, k; seed=0)
-	# Set seed for reproducibility
-	Random.seed!(seed)
-
-	# Compute node degrees and form Laplacian
-	d = vec(sum(A; dims=2))
-	Dsqrinv = sqrt(inv(Diagonal(d)))
-	L = Symmetric(I - (Dsqrinv * A) * Dsqrinv)
-
-	# Compute eigenvectors
-	decomp, history = partialschur(L; nev=k, which=:SR)
-	@info history
-
-	return mapslices(normalize, decomp.Q; dims=2), L
-end
-
-# ╔═╡ dae400bf-ea56-4ae8-9f0c-56ea45ef2652
-V, _ = embedding(A, n_clusters)
-
-# ╔═╡ 2d467a37-fcf8-4b63-8604-64216f64cb57
-md"""
-#### Run multiple K-Means runs with different random seeds and pick the clustering result with the  best run (lowest cost)
-"""
-
-# ╔═╡ f38c1c54-4e37-4c75-a67d-1b4378de0227
-function batchkmeans(X, k, args...; nruns=100, kwargs...)
-	runs = @withprogress map(1:nruns) do idx
-		# Run K-means
-		Random.seed!(idx)  # set seed for reproducibility
-		result = with_logger(NullLogger()) do
-			kmeans(X, k, args...; kwargs...)
-		end
-
-		# Log progress and return result
-		@logprogress idx/nruns
-		return result
-	end
-
-	# Print how many converged
-	nconverged = count(run -> run.converged, runs)
-	@info "$nconverged/$nruns runs converged"
-
-	# Return runs sorted best to worst
-	return sort(runs; by=run->run.totalcost)
-end
-
-# ╔═╡ ac511c25-b9bd-40a9-b03d-6032faac6781
-spec_clusterings = batchkmeans(permutedims(V), n_clusters; maxiter=1000)
-
 # ╔═╡ a8f26017-5e2a-4991-a840-68495ccece02
-costs = [spec_clusterings[i].totalcost for i in 1:100]
+# costs = [spec_clusterings[i].totalcost for i in 1:100]
 
 # ╔═╡ 4d85331b-65bb-46fa-8a8f-3634ee7eacc9
-min_index = argmin(costs)
+# min_index = argmin(costs)
 
 # ╔═╡ d4cb1d09-890a-4c8a-a5d0-ddc8f6d166eb
-aligned_assignments(clusterings, baseperm=1:maximum(first(clusterings).assignments)) = map(clusterings) do clustering
-	# New labels determined by simple heuristic that aims to align different clusterings
-	thresh! = a -> (a[a .< 0.2*sum(a)] .= 0; a)
-	alignments = [thresh!(a) for a in eachrow(counts(clusterings[1], clustering))]
-	new_labels = sortperm(alignments[baseperm]; rev=true)
+# aligned_assignments(clusterings, baseperm=1:maximum(clusterings)) = map(clusterings) do clustering
+# 	# New labels determined by simple heuristic that aims to align different clusterings
+# 	thresh! = a -> (a[a .< 0.2*sum(a)] .= 0; a)
+# 	alignments = [thresh!(a) for a in eachrow(counts(clusterings[1], clustering))]
+# 	new_labels = sortperm(alignments[baseperm]; rev=true)
 
-	# Return assignments with new labels
-	return [new_labels[l] for l in clustering.assignments]
-end
+# 	# Return assignments with new labels
+# 	return [new_labels[l] for l in clustering.assignments]
+# end
+
+# ╔═╡ 771f302d-a1a0-4e00-93cd-edec33cf1774
+# maximum(first(spec_clusterings).assignments)
 
 # ╔═╡ 5414cbcb-c322-4536-b9c3-edd9fca2ca11
-spec_aligned = aligned_assignments(spec_clusterings)
+# spec_aligned = aligned_assignments(label)
 
 # ╔═╡ 6b6a0558-ada2-4193-a5f3-a4878421f914
 md"""
@@ -325,87 +229,79 @@ md"""
 """
 
 # ╔═╡ d21295be-cbd5-4135-b2e3-7925ad133581
-@bind spec_clustering_idx PlutoUI.Slider(1:length(spec_clusterings); show_value=true)
+# @bind spec_clustering_idx PlutoUI.Slider(1:length(spec_clusterings); show_value=true)
 
-# ╔═╡ db8c4072-c07b-41b5-8baf-237665a85bfd
-begin
-	ground_labels = filter(x -> x != 0, gt_labels) #Filter out the background pixel label
-	true_labels = length(ground_labels)
-	predicted_labels = n_clusters
+# ╔═╡ b66ad2d1-3159-4cd0-9609-9f7c151e8b87
+md"""
+#### Relabel the clusters to compare it with the ground truth
+"""
 
-	confusion_matrix = zeros(Float64, true_labels, predicted_labels) #Initialize a confusion matrix filled with zeros
-	cluster_results = fill(NaN32, size(data)[1:2]) #Clustering algorithm results
-
-	clu_assign, idx = spec_aligned, spec_clustering_idx
-
-	cluster_results[mask] .= clu_assign[idx]
-
-	for (label_idx, label) in enumerate(ground_labels)
-	
-		label_indices = findall(gt_data .== label)
-	
-		cluster_values = [cluster_results[idx] for idx in label_indices]
-		t_pixels = length(cluster_values)
-		cluster_counts = [count(==(cluster), cluster_values) for cluster in 1:n_clusters]
-		confusion_matrix[label_idx, :] .= [count / t_pixels * 100 for count in cluster_counts]
-	end
-end
-
-# ╔═╡ aaf81673-a329-406e-abd0-2041a6875355
-with_theme() do
-	fig = Figure(; size=(600, 700))
-	ax = Axis(fig[1, 1], aspect=DataAspect(), yreversed=true, xlabel = "Predicted Labels", ylabel = "True Labels", xticks = 1:predicted_labels, yticks = 1:true_labels)
-	hm = heatmap!(ax, permutedims(confusion_matrix), colormap=:viridis)
-	pm = permutedims(confusion_matrix)
-
-	for i in 1:true_labels, j in 1:predicted_labels
-        value = round(pm[i, j], digits=1)
-        text!(ax, i - 0.02, j - 0.1, text = "$value", color=:black, align = (:center, :center), fontsize=14)
-    end
-	Colorbar(fig[1, 2], hm)
-	fig
-end
-
-# ╔═╡ 0a6643cf-fd62-43e3-a427-e3b4b435d047
+# ╔═╡ c100daa2-5ecb-41ac-80de-ed580548bc15
 relabel_maps = Dict(
 	"Pavia" => Dict(
 	0 => 0,
-	1 => 8,
-	2 => 3,
-	3 => 1,
-	4 => 6,
-	5 => 7,
-	6 => 2,
+	1 => 1,
+	2 => 8,
+	3 => 6,
+	4 => 7,
+	5 => 2,
+	6 => 3,
 	7 => 9,
-	8 => 5,
-	9 => 4,
+	8 => 4,
+	9 => 5
 ),
 	"PaviaUni" => Dict(
 	0 => 0,
-	1 => 3,
-	2 => 4,
-	3 => 1,
+	1 => 5,
+	2 => 8,
+	3 => 3,
 	4 => 9,
-	5 => 7,
+	5 => 1,
 	6 => 6,
-	7 => 5,
-	8 => 8,
-	9 => 2,
+	7 => 4,
+	8 => 2,
+	9 => 7,
 )
 )
 
-# ╔═╡ bb45da10-c4c3-42c9-99f7-977cd13bcfab
+# ╔═╡ c0af6dcc-a318-4a85-a828-be61fc28cc85
 relabel_keys = relabel_maps[Location]
 
-# ╔═╡ 17bd5e56-1fad-42ac-8d5d-bc6ccc26a9a3
-D_relabel = [relabel_keys[label] for label in spec_aligned[1]]
+# ╔═╡ 5d9b5b61-93cf-4824-a8d0-8ec136f0902b
+D_relabel = [relabel_keys[label] for label in labels]
 
-# ╔═╡ 9c2d52df-5704-4542-b237-0ed299bf51f6
+# ╔═╡ 57fe2828-a673-400d-961a-a9d36948ba54
 md"""
-### Confusion Matrix -- Best Clustering Result
+### Ground Truth Vs. Clustering Result
 """
 
-# ╔═╡ 6859158c-1078-4c1a-8cd0-28e31329cf46
+# ╔═╡ c6c5735d-240c-4ebf-a940-531e4f3ace81
+with_theme() do
+
+	# Create figure
+	fig = Figure(; size=(700, 650))
+	colors = Makie.Colors.distinguishable_colors(n_clusters + 1)
+	# colors_re = Makie.Colors.distinguishable_colors(length(re_labels))
+
+	# subgrid = fig[1, 1] = GridLayout()
+
+	# Show data
+	ax = Axis(fig[1,1]; aspect=DataAspect(), yreversed=true, title="Ground Truth", titlesize=20)
+	
+	hm1 = heatmap!(ax, permutedims(gt_data); colormap=Makie.Categorical(colors), colorrange=(0, 9))
+	Colorbar(fig[2,1], hm1, tellwidth=false, vertical=false)
+
+	# Show cluster map
+	ax = Axis(fig[1,2]; aspect=DataAspect(), yreversed=true, title="TSC Clustering Results - $Location", titlesize=20)
+	clustermap = fill(0, size(data)[1:2])
+	clustermap[mask] .= D_relabel
+	hm2 = heatmap!(ax, permutedims(clustermap); colormap=Makie.Categorical(colors), colorrange=(0, 9))
+	Colorbar(fig[2,2], hm2, tellwidth=false, vertical=false)
+	
+	fig
+end
+
+# ╔═╡ 60465472-3dae-482b-9630-84dbaa425966
 begin
 	ground_labels_re = filter(x -> x != 0, gt_labels) #Filter out the background pixel label
 	true_labels_re = length(ground_labels_re)
@@ -415,6 +311,7 @@ begin
 	cluster_results_re = fill(NaN32, size(data)[1:2]) #Clustering algorithm results
 
 	# clu_assign, idx = spec_aligned, spec_clustering_idx
+	
 
 	cluster_results_re[mask] .= D_relabel
 
@@ -429,142 +326,170 @@ begin
 	end
 end
 
-# ╔═╡ 62e7fc9b-180a-44d1-bc77-fbd48b49d58b
+# ╔═╡ b2d17b14-ab7f-4b4f-9403-42ec4d9e5506
 with_theme() do
-	assignments, idx = spec_aligned, spec_clustering_idx
-	
-
-	# Create figure
-	fig = Figure(; size=(1200, 600))
-	supertitle = Label(fig[0, 1:3], "Thresholded Subspace Clustering (TSC) Results on $Location Dataset & Confusion Matrix", fontsize=20, halign=:center, valign=:top)
-	colors = Makie.Colors.distinguishable_colors(n_clusters + 1)
-	# colors_re = Makie.Colors.distinguishable_colors(length(re_labels))
-	grid_1 = GridLayout(fig[1, 1]; nrow=2, ncol=1)
-	grid_2 = GridLayout(fig[1, 2]; nrow=2, ncol=1)
-	grid_3 = GridLayout(fig[1, 3]; nrow=2, ncol=1)
-
-	# Show data
-	ax1 = Axis(grid_1[1,1]; aspect=DataAspect(), yreversed=true, title="Ground Truth", titlesize=15)
-	hm = heatmap!(ax1, permutedims(gt_data); colormap=Makie.Categorical(colors), colorrange=(0, 9))
-	Colorbar(grid_1[2,1], hm, tellwidth=false, vertical=false)
-
-	# Show cluster map
-	ax2 = Axis(grid_2[1,1]; aspect=DataAspect(), yreversed=true, title="TSC Results - $Location", titlesize=15)
-	clustermap = fill(0, size(data)[1:2])
-	clustermap[mask] .= D_relabel
-	hm = heatmap!(ax2, permutedims(clustermap); colormap=Makie.Categorical(colors), colorrange=(0, 9))
-	Colorbar(grid_2[2,1], hm, tellwidth=false, vertical=false)
-
-	#Show Confusion Matrix
-	ax3 = Axis(grid_3[1, 1]; aspect=DataAspect(), yreversed=true, xlabel = "Predicted Labels", ylabel = "True Labels", xticks = 1:predicted_labels_re, yticks = 1:true_labels_re, title="TSC - $Location - Confusion Matrix")
-	hm = heatmap!(ax3, permutedims(confusion_matrix_re), colormap=:viridis)
+	fig = Figure(; size=(800, 600))
+	ax = Axis(fig[1, 1], aspect=DataAspect(), yreversed=true, xlabel = "Predicted Labels", ylabel = "True Labels", xticks = 1:predicted_labels_re, yticks = 1:true_labels_re, title="Confusion Matrix - TSC Clustering - $Location")
+	hm = heatmap!(ax, permutedims(confusion_matrix_re), colormap=:viridis)
 	pm = permutedims(confusion_matrix_re)
 
 	for i in 1:true_labels_re, j in 1:predicted_labels_re
         value = round(pm[i, j], digits=1)
-        text!(ax3, i - 0.02, j - 0.1, text = "$value", color=:black, align = (:center, :center), fontsize=10)
+        text!(ax, i - 0.02, j - 0.1, text = "$value", color=:black, align = (:center, :center), fontsize=14)
     end
-	Colorbar(grid_3[2, 1], hm, tellwidth=false, vertical=false)
+	Colorbar(fig[1, 2], hm)
 	fig
 end
 
-# ╔═╡ 6d6b2d0e-1aed-4cb2-b4fe-898833e5792b
-md"""
-### Rough Work
-"""
+# ╔═╡ db8c4072-c07b-41b5-8baf-237665a85bfd
+# begin
+# 	ground_labels = filter(x -> x != 0, gt_labels) #Filter out the background pixel label
+# 	true_labels = length(ground_labels)
+# 	predicted_labels = n_clusters
 
-# ╔═╡ 4fda3771-da44-4def-a5c8-e08658ec517e
-_, L = embedding(A, n_clusters)
+# 	confusion_matrix = zeros(Float64, true_labels, predicted_labels) #Initialize a confusion matrix filled with zeros
+# 	cluster_results = fill(NaN32, size(data)[1:2]) #Clustering algorithm results
 
-# ╔═╡ c17132dc-26e4-4a47-a96e-ac870e5d83e5
-kmax = 50
+# 	clu_assign, idx = spec_aligned, spec_clustering_idx
 
-# ╔═╡ b386f8ea-7a7d-4686-9c6a-1fe01bad2bfe
-decomp, history = partialschur(L; nev=kmax, which=:SR)
+# 	cluster_results[mask] .= clu_assign[idx]
 
-# ╔═╡ 693eb74b-3580-4705-a35c-b876fe0357a7
-eigen_values, V_part = partialeigen(decomp)
-
-# ╔═╡ bd003cc8-87c2-4085-a8d7-c89b99ca7394
-V2 = decomp.Q[:, 1:17]
-
-# ╔═╡ ab5f265e-b47c-400a-9a5a-042285473bfc
-diff(eigen_values)
-
-# ╔═╡ f30483c9-2a49-4e9d-ad7c-8acd0e24dc1d
-argmax(diff(eigen_values))
-
-# ╔═╡ 720533b6-3a14-4352-a9ce-3629279be981
-V1 = V_part[:, 1:argmax(diff(eigen_values))]
-
-# ╔═╡ 5f9a2c3f-d216-4df0-856c-00b946d6995b
-V1 == V2
-
-# ╔═╡ 6025c843-2801-442d-94f8-f9bdab1d36a3
-U, σ, Vt = svd(V1' * V2)
-
-# ╔═╡ d9e718ec-86e8-4b27-a989-e6e5bcdf7dcc
-U*Vt'
-
-# ╔═╡ 5ae940f7-9bc3-4878-8312-f8ceefac672f
-# norm(V1*V1' - V2*V2')
-
-# ╔═╡ 17c587aa-15d9-41a4-8246-6a0e10e53f11
-decomp.eigenvalues
-
-# ╔═╡ b8cad249-55fd-4f08-8256-a6a9264464f8
-R_Vector = [1, 2, 3, 6, 9, 11, 20, 30, 31, 32]
-
-# ╔═╡ 69d0fe93-7be2-47de-88bf-1371dc8ad10b
-diff(R_Vector)
-
-# ╔═╡ c6bc35d2-52c9-43bb-8975-4cac72645ee2
-function estimateK_from_L(L; kmax=50)
-    decomp, _ = partialschur(L; nev=kmax, which=:SR)
-    λ, _ = partialeigen(decomp)          # you already use this
-    λ = sort(real.(λ))
-    return argmax(diff(λ)), λ
-end
-
-# ╔═╡ 6823f6e8-3437-4d30-aec7-8d23d83c6b4b
-# for kmax in (30, 50, 80, 120, 200)
-#     Khat, _ = estimateK_from_L(L; kmax=kmax)
-#     @info "kmax=$kmax -> Khat=$Khat"
+# 	for (label_idx, label) in enumerate(ground_labels)
+	
+# 		label_indices = findall(gt_data .== label)
+	
+# 		cluster_values = [cluster_results[idx] for idx in label_indices]
+# 		t_pixels = length(cluster_values)
+# 		cluster_counts = [count(==(cluster), cluster_values) for cluster in 1:n_clusters]
+# 		confusion_matrix[label_idx, :] .= [count / t_pixels * 100 for count in cluster_counts]
+# 	end
 # end
 
-# ╔═╡ d940bee3-bf94-4dde-b61c-b17759b2c61c
-function tsc_embedding(A; K::Union{Nothing,Integer}=nothing, kmax::Integer=100)
-    # Compute node degrees and form Laplacian matrix `L` from `A`
-    D = Diagonal(vec(sum(A; dims = 2)))
-    L = Symmetric(I - (inv(sqrt(D)) * A * inv(sqrt(D))))
+# ╔═╡ aaf81673-a329-406e-abd0-2041a6875355
+# with_theme() do
+# 	fig = Figure(; size=(600, 700))
+# 	ax = Axis(fig[1, 1], aspect=DataAspect(), yreversed=true, xlabel = "Predicted Labels", ylabel = "True Labels", xticks = 1:predicted_labels, yticks = 1:true_labels)
+# 	hm = heatmap!(ax, permutedims(confusion_matrix), colormap=:viridis)
+# 	pm = permutedims(confusion_matrix)
 
-    # Choose `K`
-    # Kfinal::Int
-    if K === nothing
-        nev = min(kmax, N-1)
-        nev >= 2 || throw(ArgumentError("`kmax` must be at least 2 (got $kmax)."))
+# 	for i in 1:true_labels, j in 1:predicted_labels
+#         value = round(pm[i, j], digits=1)
+#         text!(ax, i - 0.02, j - 0.1, text = "$value", color=:black, align = (:center, :center), fontsize=14)
+#     end
+# 	Colorbar(fig[1, 2], hm)
+# 	fig
+# end
 
-        # Eigen values of the normalized Laplacian matrix, `L` to find the eigengap
-        decomp, history = partialschur(L; nev=nev, which=:SR)
-        history.converged || @warn "Iterative algorithm for eigenvectors did not converge - results may be inaccurate."
-        Eigen_values, _ = partialeigen(decomp)
-        Kfinal = argmax(diff(Eigen_values))
+# ╔═╡ 0a6643cf-fd62-43e3-a427-e3b4b435d047
+# ╠═╡ disabled = true
+#=╠═╡
+# relabel_maps = Dict(
+# 	"Pavia" => Dict(
+# 	0 => 0,
+# 	1 => 8,
+# 	2 => 3,
+# 	3 => 1,
+# 	4 => 6,
+# 	5 => 7,
+# 	6 => 2,
+# 	7 => 9,
+# 	8 => 5,
+# 	9 => 4,
+# ),
+# 	"PaviaUni" => Dict(
+# 	0 => 0,
+# 	1 => 3,
+# 	2 => 4,
+# 	3 => 1,
+# 	4 => 9,
+# 	5 => 7,
+# 	6 => 6,
+# 	7 => 5,
+# 	8 => 8,
+# 	9 => 2,
+# )
+# )
+  ╠═╡ =#
 
-        # Recompute eigen vectors for chosen `K`
-        decomp, history = partialschur(L; nev=Kfinal, which=:SR)
-        history.converged || @warn "Iterative algorithm for eigenvectors did not converge - results may be inaccurate."
-    else
-        # Kfinal = Int(K)
-        decomp, history = partialschur(L; nev=K, which=:SR)
-        history.converged || @warn "Iterative algorithm for eigenvectors did not converge - results may be inaccurate."
-    end
+# ╔═╡ bb45da10-c4c3-42c9-99f7-977cd13bcfab
+# ╠═╡ disabled = true
+#=╠═╡
+# relabel_keys = relabel_maps[Location]
+  ╠═╡ =#
 
-    # Permute and normalize to obtain embeddings
-    E = mapslices(normalize, permutedims(decomp.Q); dims = 1)
+# ╔═╡ 17bd5e56-1fad-42ac-8d5d-bc6ccc26a9a3
+# ╠═╡ disabled = true
+#=╠═╡
+# D_relabel = [relabel_keys[label] for label in spec_aligned[1]]
+  ╠═╡ =#
 
-    # Return the embeddings
-    return E
-end
+# ╔═╡ 9c2d52df-5704-4542-b237-0ed299bf51f6
+md"""
+### Confusion Matrix -- Best Clustering Result
+"""
+
+# ╔═╡ 6859158c-1078-4c1a-8cd0-28e31329cf46
+# begin
+# 	ground_labels_re = filter(x -> x != 0, gt_labels) #Filter out the background pixel label
+# 	true_labels_re = length(ground_labels_re)
+# 	predicted_labels_re = n_clusters
+
+# 	confusion_matrix_re = zeros(Float64, true_labels_re, predicted_labels_re) #Initialize a confusion matrix filled with zeros
+# 	cluster_results_re = fill(NaN32, size(data)[1:2]) #Clustering algorithm results
+
+# 	# clu_assign, idx = spec_aligned, spec_clustering_idx
+
+# 	cluster_results_re[mask] .= D_relabel
+
+# 	for (label_idx, label) in enumerate(ground_labels_re)
+	
+# 		label_indices = findall(gt_data .== label)
+	
+# 		cluster_values = [cluster_results_re[idx] for idx in label_indices]
+# 		t_pixels = length(cluster_values)
+# 		cluster_counts = [count(==(cluster), cluster_values) for cluster in 1:n_clusters]
+# 		confusion_matrix_re[label_idx, :] .= [count / t_pixels * 100 for count in cluster_counts]
+# 	end
+# end
+
+# ╔═╡ 62e7fc9b-180a-44d1-bc77-fbd48b49d58b
+# with_theme() do
+# 	assignments, idx = spec_aligned, spec_clustering_idx
+	
+
+# 	# Create figure
+# 	fig = Figure(; size=(1200, 600))
+# 	supertitle = Label(fig[0, 1:3], "Thresholded Subspace Clustering (TSC) Results on $Location Dataset & Confusion Matrix", fontsize=20, halign=:center, valign=:top)
+# 	colors = Makie.Colors.distinguishable_colors(n_clusters + 1)
+# 	# colors_re = Makie.Colors.distinguishable_colors(length(re_labels))
+# 	grid_1 = GridLayout(fig[1, 1]; nrow=2, ncol=1)
+# 	grid_2 = GridLayout(fig[1, 2]; nrow=2, ncol=1)
+# 	grid_3 = GridLayout(fig[1, 3]; nrow=2, ncol=1)
+
+# 	# Show data
+# 	ax1 = Axis(grid_1[1,1]; aspect=DataAspect(), yreversed=true, title="Ground Truth", titlesize=15)
+# 	hm = heatmap!(ax1, permutedims(gt_data); colormap=Makie.Categorical(colors), colorrange=(0, 9))
+# 	Colorbar(grid_1[2,1], hm, tellwidth=false, vertical=false)
+
+# 	# Show cluster map
+# 	ax2 = Axis(grid_2[1,1]; aspect=DataAspect(), yreversed=true, title="TSC Results - $Location", titlesize=15)
+# 	clustermap = fill(0, size(data)[1:2])
+# 	clustermap[mask] .= D_relabel
+# 	hm = heatmap!(ax2, permutedims(clustermap); colormap=Makie.Categorical(colors), colorrange=(0, 9))
+# 	Colorbar(grid_2[2,1], hm, tellwidth=false, vertical=false)
+
+# 	#Show Confusion Matrix
+# 	ax3 = Axis(grid_3[1, 1]; aspect=DataAspect(), yreversed=true, xlabel = "Predicted Labels", ylabel = "True Labels", xticks = 1:predicted_labels_re, yticks = 1:true_labels_re, title="TSC - $Location - Confusion Matrix")
+# 	hm = heatmap!(ax3, permutedims(confusion_matrix_re), colormap=:viridis)
+# 	pm = permutedims(confusion_matrix_re)
+
+# 	for i in 1:true_labels_re, j in 1:predicted_labels_re
+#         value = round(pm[i, j], digits=1)
+#         text!(ax3, i - 0.02, j - 0.1, text = "$value", color=:black, align = (:center, :center), fontsize=10)
+#     end
+# 	Colorbar(grid_3[2, 1], hm, tellwidth=false, vertical=false)
+# 	fig
+# end
 
 # ╔═╡ Cell order:
 # ╟─0bdfe2ea-7c33-11f0-3423-e9a930a7eff5
@@ -600,25 +525,25 @@ end
 # ╟─ced71964-16de-44bd-b34a-98054a0ea185
 # ╟─6de6a857-cf65-4c59-841d-6d4c9353e617
 # ╟─2763c03a-8470-41ce-a991-5aa8762ca971
+# ╠═0e14a739-a926-45b4-8df1-96090d257bfd
+# ╠═d4b67203-333b-45e0-91b2-4fa8d1a8ba78
+# ╠═d61311e5-b471-44a8-9969-9ffbb713356e
 # ╟─56ae6711-4645-4981-81a5-4ddc5c5fc521
-# ╟─29242190-f547-4fe5-abcd-2dac57200163
-# ╟─c9697307-e424-42e3-9e61-100e9d2eb61b
-# ╠═967709d5-ac33-4ec0-b2d2-c50d72dc8017
-# ╟─4ce6a047-e4f8-41a2-9c4a-94643e8ce737
-# ╠═efb0c7d5-28f3-44cc-a521-3bb1464da64a
-# ╠═033d4da1-eba3-4c59-b945-2d59b81906e6
-# ╟─8b2fa6e6-04ac-4b7b-a29c-f1c38dbcfdb1
-# ╠═0fa5a2ea-1a4d-4ed5-9ae1-a0a3280d0bfe
-# ╠═dae400bf-ea56-4ae8-9f0c-56ea45ef2652
-# ╟─2d467a37-fcf8-4b63-8604-64216f64cb57
-# ╠═f38c1c54-4e37-4c75-a67d-1b4378de0227
-# ╠═ac511c25-b9bd-40a9-b03d-6032faac6781
 # ╠═a8f26017-5e2a-4991-a840-68495ccece02
 # ╠═4d85331b-65bb-46fa-8a8f-3634ee7eacc9
 # ╠═d4cb1d09-890a-4c8a-a5d0-ddc8f6d166eb
+# ╠═771f302d-a1a0-4e00-93cd-edec33cf1774
 # ╠═5414cbcb-c322-4536-b9c3-edd9fca2ca11
 # ╟─6b6a0558-ada2-4193-a5f3-a4878421f914
 # ╠═d21295be-cbd5-4135-b2e3-7925ad133581
+# ╠═b66ad2d1-3159-4cd0-9609-9f7c151e8b87
+# ╠═c100daa2-5ecb-41ac-80de-ed580548bc15
+# ╠═c0af6dcc-a318-4a85-a828-be61fc28cc85
+# ╠═5d9b5b61-93cf-4824-a8d0-8ec136f0902b
+# ╟─57fe2828-a673-400d-961a-a9d36948ba54
+# ╠═c6c5735d-240c-4ebf-a940-531e4f3ace81
+# ╠═60465472-3dae-482b-9630-84dbaa425966
+# ╠═b2d17b14-ab7f-4b4f-9403-42ec4d9e5506
 # ╠═db8c4072-c07b-41b5-8baf-237665a85bfd
 # ╠═aaf81673-a329-406e-abd0-2041a6875355
 # ╠═0a6643cf-fd62-43e3-a427-e3b4b435d047
@@ -627,22 +552,3 @@ end
 # ╟─9c2d52df-5704-4542-b237-0ed299bf51f6
 # ╠═6859158c-1078-4c1a-8cd0-28e31329cf46
 # ╠═62e7fc9b-180a-44d1-bc77-fbd48b49d58b
-# ╟─6d6b2d0e-1aed-4cb2-b4fe-898833e5792b
-# ╠═4fda3771-da44-4def-a5c8-e08658ec517e
-# ╠═c17132dc-26e4-4a47-a96e-ac870e5d83e5
-# ╠═b386f8ea-7a7d-4686-9c6a-1fe01bad2bfe
-# ╠═693eb74b-3580-4705-a35c-b876fe0357a7
-# ╠═bd003cc8-87c2-4085-a8d7-c89b99ca7394
-# ╠═ab5f265e-b47c-400a-9a5a-042285473bfc
-# ╠═f30483c9-2a49-4e9d-ad7c-8acd0e24dc1d
-# ╠═720533b6-3a14-4352-a9ce-3629279be981
-# ╠═5f9a2c3f-d216-4df0-856c-00b946d6995b
-# ╠═6025c843-2801-442d-94f8-f9bdab1d36a3
-# ╠═d9e718ec-86e8-4b27-a989-e6e5bcdf7dcc
-# ╠═5ae940f7-9bc3-4878-8312-f8ceefac672f
-# ╠═17c587aa-15d9-41a4-8246-6a0e10e53f11
-# ╠═b8cad249-55fd-4f08-8256-a6a9264464f8
-# ╠═69d0fe93-7be2-47de-88bf-1371dc8ad10b
-# ╠═c6bc35d2-52c9-43bb-8975-4cac72645ee2
-# ╠═6823f6e8-3437-4d30-aec7-8d23d83c6b4b
-# ╠═d940bee3-bf94-4dde-b61c-b17759b2c61c
