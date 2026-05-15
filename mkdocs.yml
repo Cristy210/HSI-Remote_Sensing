@@ -25,6 +25,8 @@ nav:
       - Overview: python-tsc.md
   - MATLAB TSC:
       - Overview: matlab-tsc.md
+  - Julia TSC:
+      - Overview: julia-tsc.md
 plugins:
   - search
   - mkdocstrings:
