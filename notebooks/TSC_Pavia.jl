@@ -197,39 +197,10 @@ model = fit(data[mask, :]', n_clusters; max_nz=15)
 # ╔═╡ d61311e5-b471-44a8-9969-9ffbb713356e
 labels = model.assignments
 
-# ╔═╡ 56ae6711-4645-4981-81a5-4ddc5c5fc521
-
-
-# ╔═╡ a8f26017-5e2a-4991-a840-68495ccece02
-# costs = [spec_clusterings[i].totalcost for i in 1:100]
-
-# ╔═╡ 4d85331b-65bb-46fa-8a8f-3634ee7eacc9
-# min_index = argmin(costs)
-
-# ╔═╡ d4cb1d09-890a-4c8a-a5d0-ddc8f6d166eb
-# aligned_assignments(clusterings, baseperm=1:maximum(clusterings)) = map(clusterings) do clustering
-# 	# New labels determined by simple heuristic that aims to align different clusterings
-# 	thresh! = a -> (a[a .< 0.2*sum(a)] .= 0; a)
-# 	alignments = [thresh!(a) for a in eachrow(counts(clusterings[1], clustering))]
-# 	new_labels = sortperm(alignments[baseperm]; rev=true)
-
-# 	# Return assignments with new labels
-# 	return [new_labels[l] for l in clustering.assignments]
-# end
-
-# ╔═╡ 771f302d-a1a0-4e00-93cd-edec33cf1774
-# maximum(first(spec_clusterings).assignments)
-
-# ╔═╡ 5414cbcb-c322-4536-b9c3-edd9fca2ca11
-# spec_aligned = aligned_assignments(label)
-
 # ╔═╡ 6b6a0558-ada2-4193-a5f3-a4878421f914
 md"""
 ### Confusion Matrix -- Clustering Results
 """
-
-# ╔═╡ d21295be-cbd5-4135-b2e3-7925ad133581
-# @bind spec_clustering_idx PlutoUI.Slider(1:length(spec_clusterings); show_value=true)
 
 # ╔═╡ b66ad2d1-3159-4cd0-9609-9f7c151e8b87
 md"""
@@ -241,14 +212,14 @@ relabel_maps = Dict(
 	"Pavia" => Dict(
 	0 => 0,
 	1 => 1,
-	2 => 8,
-	3 => 6,
-	4 => 7,
+	2 => 6,
+	3 => 7,
+	4 => 8,
 	5 => 2,
-	6 => 3,
-	7 => 9,
+	6 => 9,
+	7 => 5,
 	8 => 4,
-	9 => 5
+	9 => 3
 ),
 	"PaviaUni" => Dict(
 	0 => 0,
@@ -341,156 +312,6 @@ with_theme() do
 	fig
 end
 
-# ╔═╡ db8c4072-c07b-41b5-8baf-237665a85bfd
-# begin
-# 	ground_labels = filter(x -> x != 0, gt_labels) #Filter out the background pixel label
-# 	true_labels = length(ground_labels)
-# 	predicted_labels = n_clusters
-
-# 	confusion_matrix = zeros(Float64, true_labels, predicted_labels) #Initialize a confusion matrix filled with zeros
-# 	cluster_results = fill(NaN32, size(data)[1:2]) #Clustering algorithm results
-
-# 	clu_assign, idx = spec_aligned, spec_clustering_idx
-
-# 	cluster_results[mask] .= clu_assign[idx]
-
-# 	for (label_idx, label) in enumerate(ground_labels)
-	
-# 		label_indices = findall(gt_data .== label)
-	
-# 		cluster_values = [cluster_results[idx] for idx in label_indices]
-# 		t_pixels = length(cluster_values)
-# 		cluster_counts = [count(==(cluster), cluster_values) for cluster in 1:n_clusters]
-# 		confusion_matrix[label_idx, :] .= [count / t_pixels * 100 for count in cluster_counts]
-# 	end
-# end
-
-# ╔═╡ aaf81673-a329-406e-abd0-2041a6875355
-# with_theme() do
-# 	fig = Figure(; size=(600, 700))
-# 	ax = Axis(fig[1, 1], aspect=DataAspect(), yreversed=true, xlabel = "Predicted Labels", ylabel = "True Labels", xticks = 1:predicted_labels, yticks = 1:true_labels)
-# 	hm = heatmap!(ax, permutedims(confusion_matrix), colormap=:viridis)
-# 	pm = permutedims(confusion_matrix)
-
-# 	for i in 1:true_labels, j in 1:predicted_labels
-#         value = round(pm[i, j], digits=1)
-#         text!(ax, i - 0.02, j - 0.1, text = "$value", color=:black, align = (:center, :center), fontsize=14)
-#     end
-# 	Colorbar(fig[1, 2], hm)
-# 	fig
-# end
-
-# ╔═╡ 0a6643cf-fd62-43e3-a427-e3b4b435d047
-# ╠═╡ disabled = true
-#=╠═╡
-# relabel_maps = Dict(
-# 	"Pavia" => Dict(
-# 	0 => 0,
-# 	1 => 8,
-# 	2 => 3,
-# 	3 => 1,
-# 	4 => 6,
-# 	5 => 7,
-# 	6 => 2,
-# 	7 => 9,
-# 	8 => 5,
-# 	9 => 4,
-# ),
-# 	"PaviaUni" => Dict(
-# 	0 => 0,
-# 	1 => 3,
-# 	2 => 4,
-# 	3 => 1,
-# 	4 => 9,
-# 	5 => 7,
-# 	6 => 6,
-# 	7 => 5,
-# 	8 => 8,
-# 	9 => 2,
-# )
-# )
-  ╠═╡ =#
-
-# ╔═╡ bb45da10-c4c3-42c9-99f7-977cd13bcfab
-# ╠═╡ disabled = true
-#=╠═╡
-# relabel_keys = relabel_maps[Location]
-  ╠═╡ =#
-
-# ╔═╡ 17bd5e56-1fad-42ac-8d5d-bc6ccc26a9a3
-# ╠═╡ disabled = true
-#=╠═╡
-# D_relabel = [relabel_keys[label] for label in spec_aligned[1]]
-  ╠═╡ =#
-
-# ╔═╡ 9c2d52df-5704-4542-b237-0ed299bf51f6
-md"""
-### Confusion Matrix -- Best Clustering Result
-"""
-
-# ╔═╡ 6859158c-1078-4c1a-8cd0-28e31329cf46
-# begin
-# 	ground_labels_re = filter(x -> x != 0, gt_labels) #Filter out the background pixel label
-# 	true_labels_re = length(ground_labels_re)
-# 	predicted_labels_re = n_clusters
-
-# 	confusion_matrix_re = zeros(Float64, true_labels_re, predicted_labels_re) #Initialize a confusion matrix filled with zeros
-# 	cluster_results_re = fill(NaN32, size(data)[1:2]) #Clustering algorithm results
-
-# 	# clu_assign, idx = spec_aligned, spec_clustering_idx
-
-# 	cluster_results_re[mask] .= D_relabel
-
-# 	for (label_idx, label) in enumerate(ground_labels_re)
-	
-# 		label_indices = findall(gt_data .== label)
-	
-# 		cluster_values = [cluster_results_re[idx] for idx in label_indices]
-# 		t_pixels = length(cluster_values)
-# 		cluster_counts = [count(==(cluster), cluster_values) for cluster in 1:n_clusters]
-# 		confusion_matrix_re[label_idx, :] .= [count / t_pixels * 100 for count in cluster_counts]
-# 	end
-# end
-
-# ╔═╡ 62e7fc9b-180a-44d1-bc77-fbd48b49d58b
-# with_theme() do
-# 	assignments, idx = spec_aligned, spec_clustering_idx
-	
-
-# 	# Create figure
-# 	fig = Figure(; size=(1200, 600))
-# 	supertitle = Label(fig[0, 1:3], "Thresholded Subspace Clustering (TSC) Results on $Location Dataset & Confusion Matrix", fontsize=20, halign=:center, valign=:top)
-# 	colors = Makie.Colors.distinguishable_colors(n_clusters + 1)
-# 	# colors_re = Makie.Colors.distinguishable_colors(length(re_labels))
-# 	grid_1 = GridLayout(fig[1, 1]; nrow=2, ncol=1)
-# 	grid_2 = GridLayout(fig[1, 2]; nrow=2, ncol=1)
-# 	grid_3 = GridLayout(fig[1, 3]; nrow=2, ncol=1)
-
-# 	# Show data
-# 	ax1 = Axis(grid_1[1,1]; aspect=DataAspect(), yreversed=true, title="Ground Truth", titlesize=15)
-# 	hm = heatmap!(ax1, permutedims(gt_data); colormap=Makie.Categorical(colors), colorrange=(0, 9))
-# 	Colorbar(grid_1[2,1], hm, tellwidth=false, vertical=false)
-
-# 	# Show cluster map
-# 	ax2 = Axis(grid_2[1,1]; aspect=DataAspect(), yreversed=true, title="TSC Results - $Location", titlesize=15)
-# 	clustermap = fill(0, size(data)[1:2])
-# 	clustermap[mask] .= D_relabel
-# 	hm = heatmap!(ax2, permutedims(clustermap); colormap=Makie.Categorical(colors), colorrange=(0, 9))
-# 	Colorbar(grid_2[2,1], hm, tellwidth=false, vertical=false)
-
-# 	#Show Confusion Matrix
-# 	ax3 = Axis(grid_3[1, 1]; aspect=DataAspect(), yreversed=true, xlabel = "Predicted Labels", ylabel = "True Labels", xticks = 1:predicted_labels_re, yticks = 1:true_labels_re, title="TSC - $Location - Confusion Matrix")
-# 	hm = heatmap!(ax3, permutedims(confusion_matrix_re), colormap=:viridis)
-# 	pm = permutedims(confusion_matrix_re)
-
-# 	for i in 1:true_labels_re, j in 1:predicted_labels_re
-#         value = round(pm[i, j], digits=1)
-#         text!(ax3, i - 0.02, j - 0.1, text = "$value", color=:black, align = (:center, :center), fontsize=10)
-#     end
-# 	Colorbar(grid_3[2, 1], hm, tellwidth=false, vertical=false)
-# 	fig
-# end
-
 # ╔═╡ Cell order:
 # ╟─0bdfe2ea-7c33-11f0-3423-e9a930a7eff5
 # ╟─4ab3db82-595e-4cba-99e3-651b069ba7d9
@@ -528,15 +349,8 @@ md"""
 # ╠═0e14a739-a926-45b4-8df1-96090d257bfd
 # ╠═d4b67203-333b-45e0-91b2-4fa8d1a8ba78
 # ╠═d61311e5-b471-44a8-9969-9ffbb713356e
-# ╟─56ae6711-4645-4981-81a5-4ddc5c5fc521
-# ╠═a8f26017-5e2a-4991-a840-68495ccece02
-# ╠═4d85331b-65bb-46fa-8a8f-3634ee7eacc9
-# ╠═d4cb1d09-890a-4c8a-a5d0-ddc8f6d166eb
-# ╠═771f302d-a1a0-4e00-93cd-edec33cf1774
-# ╠═5414cbcb-c322-4536-b9c3-edd9fca2ca11
 # ╟─6b6a0558-ada2-4193-a5f3-a4878421f914
-# ╠═d21295be-cbd5-4135-b2e3-7925ad133581
-# ╠═b66ad2d1-3159-4cd0-9609-9f7c151e8b87
+# ╟─b66ad2d1-3159-4cd0-9609-9f7c151e8b87
 # ╠═c100daa2-5ecb-41ac-80de-ed580548bc15
 # ╠═c0af6dcc-a318-4a85-a828-be61fc28cc85
 # ╠═5d9b5b61-93cf-4824-a8d0-8ec136f0902b
@@ -544,11 +358,3 @@ md"""
 # ╠═c6c5735d-240c-4ebf-a940-531e4f3ace81
 # ╠═60465472-3dae-482b-9630-84dbaa425966
 # ╠═b2d17b14-ab7f-4b4f-9403-42ec4d9e5506
-# ╠═db8c4072-c07b-41b5-8baf-237665a85bfd
-# ╠═aaf81673-a329-406e-abd0-2041a6875355
-# ╠═0a6643cf-fd62-43e3-a427-e3b4b435d047
-# ╠═bb45da10-c4c3-42c9-99f7-977cd13bcfab
-# ╠═17bd5e56-1fad-42ac-8d5d-bc6ccc26a9a3
-# ╟─9c2d52df-5704-4542-b237-0ed299bf51f6
-# ╠═6859158c-1078-4c1a-8cd0-28e31329cf46
-# ╠═62e7fc9b-180a-44d1-bc77-fbd48b49d58b
