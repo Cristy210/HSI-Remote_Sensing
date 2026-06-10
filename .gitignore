@@ -6,6 +6,8 @@ Salinas.jl
 Local TestFiles/
 .vscode/
 /TSC_Python/__pycache__/
+/OSCD Test/
+/OSCD Train/
 
 # Ignore Jupyter notebook checkpoints
 .ipynb_checkpoints/
