@@ -8,6 +8,7 @@ Local TestFiles/
 /TSC_Python/__pycache__/
 /OSCD Test/
 /OSCD Train/
+/CZ_hsdb/
 
 # Ignore Jupyter notebook checkpoints
 .ipynb_checkpoints/
