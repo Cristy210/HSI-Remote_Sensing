@@ -1,4 +1,5 @@
 [deps]
+ArchGDAL = "c9ce4bd3-c3d5-55b8-8973-c0e20141b8c3"
 ArnoldiMethod = "ec485272-7323-5ecc-a04f-4719b315124d"
 CacheVariables = "9a355d7c-ffe9-11e8-019f-21dae27d1722"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
