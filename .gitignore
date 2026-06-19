@@ -6,6 +6,10 @@ Salinas.jl
 Local TestFiles/
 .vscode/
 /TSC_Python/__pycache__/
+/OSCD Test/
+/OSCD Train/
+/CZ_hsdb/
+/Onera Satellite Change Detection dataset - Images/
 
 # Ignore Jupyter notebook checkpoints
 .ipynb_checkpoints/
