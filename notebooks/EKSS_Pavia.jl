@@ -20,7 +20,7 @@ end
 import Pkg; Pkg.activate(joinpath(@__DIR__, ".."))
 
 # ╔═╡ aacd15ee-d9d1-44c9-b74d-e19f11c624d3
-using CairoMakie, LinearAlgebra, Colors, PlutoUI, Glob, FileIO, ProgressLogging, Dates, Logging, MAT
+using CairoMakie, LinearAlgebra, Colors, PlutoUI, Glob, FileIO, ProgressLogging, Dates, Logging, MAT, CacheVariables
 
 # ╔═╡ 9c682225-c728-43fd-bfe6-7aa645658a0b
 begin
@@ -165,26 +165,40 @@ end
 # ╔═╡ 1227b4a1-6bee-4dd8-af46-a7be4f66893d
 Threads.nthreads()
 
-# ╔═╡ 192db804-fe7a-4588-a6f2-7fed151597ea
-model = fit(data[mask, :]', 1, n_clusters; parallel = true, nruns=20, q=1500)
+# ╔═╡ 32d645f8-4799-4f4e-bd72-39bf39bde29a
+@bind q PlutoUI.Slider(500:2000; show_value=true, default=1500)
+
+# ╔═╡ 63fbc23c-10d2-489b-a5ea-ffeaad4ae30e
+@bind nruns PlutoUI.Slider(20:50; show_value=true)
+
+# ╔═╡ d26cb582-f4d7-4ac3-88ac-6e10f8f1678c
+labels = cache(joinpath(CACHEDIR, "EKSS_$(Location)_$(q)_$(nruns)_labels.bson")) do
+    model = fit(data[mask, :]', 1, n_clusters;
+        parallel=true,
+        nruns=nruns,
+        q=q,
+    )
+
+    model.assignments
+end
 
 # ╔═╡ 75a0aa1b-46db-4f18-b3c7-8d2ae2abb4a4
-labels = model.assignments
+# labels = model.assignments
 
 # ╔═╡ c0ab09e7-8a15-46db-bd2f-3c919db3e3f3
-unique(model.assignments)
+unique(labels)
 
 # ╔═╡ 7cdb0e0d-e193-49a2-aa0f-27d363fa98ff
-N = size(model.coassoc, 1)
+# N = size(model.coassoc, 1)
 
 # ╔═╡ 6b852205-3791-49d9-bb73-599aa4b9484d
-max(300, round(Int, 0.01 * N))
+# max(300, round(Int, 0.01 * N))
 
 # ╔═╡ a13da7f6-b291-4373-b891-feb948fe58b4
-degrees = vec(sum(model.coassoc; dims=2))
+# degrees = vec(sum(model.coassoc; dims=2))
 
 # ╔═╡ 1343229c-5a94-4725-b915-f622d1e4ffc1
-minimum(degrees), maximum(degrees), count(==(0), degrees)
+# minimum(degrees), maximum(degrees), count(==(0), degrees)
 
 # ╔═╡ 9e9dc36d-b48c-4844-a5e8-e4c71ab4bb22
 md"""
@@ -207,15 +221,15 @@ relabel_maps = Dict(
 ),
 	"PaviaUni" => Dict(
 	0 => 0,
-	1 => 8,
-	2 => 7,
-	3 => 3,
+	1 => 9,
+	2 => 1,
+	3 => 2,
 	4 => 5,
-	5 => 1,
+	5 => 4,
 	6 => 6,
-	7 => 2,
-	8 => 4,
-	9 => 9,
+	7 => 8,
+	8 => 3,
+	9 => 7,
 )
 )
 
@@ -234,7 +248,7 @@ md"""
 with_theme() do
 
 	# Create figure
-	fig = Figure(; size=(700, 650))
+	fig = Figure(; size=(900, 650))
 	colors = Makie.Colors.distinguishable_colors(n_clusters + 1)
 	# colors_re = Makie.Colors.distinguishable_colors(length(re_labels))
 
@@ -306,7 +320,7 @@ end
 # ╠═bb111521-cd8a-404f-84d3-2fba9b52e236
 # ╠═173c4379-4513-46a9-a09b-c3226fe9a54d
 # ╠═0bd2cf71-329d-418f-90a7-8f9e7a20872e
-# ╠═ff448999-94a1-419c-9d51-7f144b0c96b0
+# ╟─ff448999-94a1-419c-9d51-7f144b0c96b0
 # ╠═890a9c97-0b20-4cc5-b006-5f94104787a6
 # ╠═7dc8381e-41ff-49d7-bcd6-b5ad144cc15c
 # ╠═f1943287-7fbb-44d4-a037-801c5726a7ee
@@ -319,16 +333,18 @@ end
 # ╠═19876584-7aac-4145-b4fc-4812539c4547
 # ╠═6b497645-8d10-44fc-831b-190ea780118d
 # ╠═0bbf9db6-7225-4075-8ab1-11d3507de0f8
-# ╠═382e5182-5771-4946-a408-fa280e46817e
+# ╟─382e5182-5771-4946-a408-fa280e46817e
 # ╠═838ef749-8c22-41b2-b4d9-9647e44d6364
-# ╠═2766502b-4c3b-4c5e-bfad-9c1acefcb6fd
+# ╟─2766502b-4c3b-4c5e-bfad-9c1acefcb6fd
 # ╠═78144c74-6406-4394-bb3f-f7f35e755847
-# ╠═f917bf5c-0db4-401e-86f7-3568ee3466fd
+# ╟─f917bf5c-0db4-401e-86f7-3568ee3466fd
 # ╠═c50aeb77-adf7-458d-a632-68b5f92f47d5
 # ╠═02bebeff-2f55-458a-ba57-0aed5b144949
 # ╠═9c682225-c728-43fd-bfe6-7aa645658a0b
 # ╠═1227b4a1-6bee-4dd8-af46-a7be4f66893d
-# ╠═192db804-fe7a-4588-a6f2-7fed151597ea
+# ╠═32d645f8-4799-4f4e-bd72-39bf39bde29a
+# ╠═63fbc23c-10d2-489b-a5ea-ffeaad4ae30e
+# ╠═d26cb582-f4d7-4ac3-88ac-6e10f8f1678c
 # ╠═75a0aa1b-46db-4f18-b3c7-8d2ae2abb4a4
 # ╠═c0ab09e7-8a15-46db-bd2f-3c919db3e3f3
 # ╠═7cdb0e0d-e193-49a2-aa0f-27d363fa98ff

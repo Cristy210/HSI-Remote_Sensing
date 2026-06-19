@@ -9,6 +9,7 @@ Local TestFiles/
 /OSCD Test/
 /OSCD Train/
 /CZ_hsdb/
+/Onera Satellite Change Detection dataset - Images/
 
 # Ignore Jupyter notebook checkpoints
 .ipynb_checkpoints/
