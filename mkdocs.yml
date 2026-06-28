@@ -27,6 +27,8 @@ nav:
       - Overview: matlab-tsc.md
   - Julia TSC:
       - Overview: julia-tsc.md
+  - Julia EKSS:
+      - Overview: julia-ekss.md
 plugins:
   - search
   - mkdocstrings:
