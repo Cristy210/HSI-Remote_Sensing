@@ -166,15 +166,16 @@ end
 Threads.nthreads()
 
 # ╔═╡ 32d645f8-4799-4f4e-bd72-39bf39bde29a
-@bind q PlutoUI.Slider(500:2000; show_value=true, default=1500)
+@bind q PlutoUI.Slider(500:2000; show_value=true, default=1802)
 
 # ╔═╡ 63fbc23c-10d2-489b-a5ea-ffeaad4ae30e
-@bind nruns PlutoUI.Slider(20:50; show_value=true)
+@bind nruns PlutoUI.Slider(20:50; show_value=true, default=20)
 
 # ╔═╡ d26cb582-f4d7-4ac3-88ac-6e10f8f1678c
 labels = cache(joinpath(CACHEDIR, "EKSS_$(Location)_$(q)_$(nruns)_labels.bson")) do
     model = fit(data[mask, :]', 1, n_clusters;
-        parallel=true,
+        Kbar=7,
+		parallel=true,
         nruns=nruns,
         q=q,
     )
@@ -209,15 +210,15 @@ md"""
 relabel_maps = Dict(
 	"Pavia" => Dict(
 	0 => 0,
-	1 => 8,
-	2 => 4,
-	3 => 2,
-	4 => 9,
-	5 => 1,
-	6 => 5,
-	7 => 3,
+	1 => 4,
+	2 => 6,
+	3 => 5,
+	4 => 1,
+	5 => 9,
+	6 => 3,
+	7 => 2,
 	8 => 7,
-	9 => 6
+	9 => 8
 ),
 	"PaviaUni" => Dict(
 	0 => 0,
@@ -248,7 +249,7 @@ md"""
 with_theme() do
 
 	# Create figure
-	fig = Figure(; size=(900, 650))
+	fig = Figure(; size=(950, 650))
 	colors = Makie.Colors.distinguishable_colors(n_clusters + 1)
 	# colors_re = Makie.Colors.distinguishable_colors(length(re_labels))
 

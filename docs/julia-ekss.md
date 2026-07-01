@@ -21,3 +21,9 @@ using .EKSS
 # K is the number of clusters
 labels = fit(X, d, K; maxiters=100)
 ```
+
+## Example usage
+
+The following Pluto notebook shows an example of running the EKSS algorithm on the Pavia dataset.
+
+👉 [EKSS Implementation - Julia (HTML)](EKSS_Julia/EKSS_Pavia.html)
