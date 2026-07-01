@@ -171,10 +171,13 @@ Threads.nthreads()
 # ╔═╡ 63fbc23c-10d2-489b-a5ea-ffeaad4ae30e
 @bind nruns PlutoUI.Slider(20:50; show_value=true, default=20)
 
+# ╔═╡ 3f5d5f80-1705-4741-8ce5-c1efc327542f
+@bind Kbar PlutoUI.Slider(3:8; show_value=true, default=7)
+
 # ╔═╡ d26cb582-f4d7-4ac3-88ac-6e10f8f1678c
-labels = cache(joinpath(CACHEDIR, "EKSS_$(Location)_$(q)_$(nruns)_labels.bson")) do
+labels = cache(joinpath(CACHEDIR, "EKSS_$(Location)_$(q)_$(nruns)_$(Kbar)_labels.bson")) do
     model = fit(data[mask, :]', 1, n_clusters;
-        Kbar=7,
+        Kbar=Kbar,
 		parallel=true,
         nruns=nruns,
         q=q,
@@ -210,15 +213,15 @@ md"""
 relabel_maps = Dict(
 	"Pavia" => Dict(
 	0 => 0,
-	1 => 4,
-	2 => 6,
-	3 => 5,
-	4 => 1,
+	1 => 8,
+	2 => 1,
+	3 => 7,
+	4 => 2,
 	5 => 9,
-	6 => 3,
-	7 => 2,
-	8 => 7,
-	9 => 8
+	6 => 5,
+	7 => 6,
+	8 => 3,
+	9 => 4
 ),
 	"PaviaUni" => Dict(
 	0 => 0,
@@ -345,6 +348,7 @@ end
 # ╠═1227b4a1-6bee-4dd8-af46-a7be4f66893d
 # ╠═32d645f8-4799-4f4e-bd72-39bf39bde29a
 # ╠═63fbc23c-10d2-489b-a5ea-ffeaad4ae30e
+# ╠═3f5d5f80-1705-4741-8ce5-c1efc327542f
 # ╠═d26cb582-f4d7-4ac3-88ac-6e10f8f1678c
 # ╠═75a0aa1b-46db-4f18-b3c7-8d2ae2abb4a4
 # ╠═c0ab09e7-8a15-46db-bd2f-3c919db3e3f3
