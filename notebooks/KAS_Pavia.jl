@@ -53,7 +53,7 @@ md"""
 """
 
 # ╔═╡ 461d3eda-2599-4a93-9a8c-b3b20d530082
-@bind Location Select(["PaviaUni",])
+@bind Location Select(["Pavia",])
 
 # ╔═╡ 53510449-6e63-4efe-9b63-50e5b2f31012
 filepath = abspath(joinpath(@__DIR__, "..", "MAT Files", "$Location.mat"))
