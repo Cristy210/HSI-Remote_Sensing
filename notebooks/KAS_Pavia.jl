@@ -20,7 +20,7 @@ end
 import Pkg; Pkg.activate(joinpath(@__DIR__, ".."))
 
 # ╔═╡ 0b1a39fa-0f1d-4573-90e1-b95660499d38
-using CairoMakie, LinearAlgebra, Colors, PlutoUI, Glob, FileIO, ProgressLogging, Dates, Logging, MAT
+using CairoMakie, LinearAlgebra, Colors, PlutoUI, Glob, FileIO, ProgressLogging, Dates, Logging, MAT, CacheVariables
 
 # ╔═╡ dd843d8a-db29-42cc-850d-3ac1e7727459
 begin
@@ -42,7 +42,7 @@ main {
 
 # ╔═╡ 1e4668ad-33c3-4750-9eb4-2c487e69150b
 md"""
-### This Notebook demonstrates the implementation of K-Subspaces Clustering (KSS) Clustering Algorithm on Pavia Dataset
+### This Notebook demonstrates the implementation of K-Affine spaces Clustering (KAS) Clustering Algorithm on Pavia and Salinas Dataset
 """
 
 # ╔═╡ c34461b9-d2a4-496d-abe6-bd8b17d8029a
@@ -53,7 +53,7 @@ md"""
 """
 
 # ╔═╡ 461d3eda-2599-4a93-9a8c-b3b20d530082
-@bind Location Select(["Pavia",])
+@bind Location Select(["PaviaUni",])
 
 # ╔═╡ 53510449-6e63-4efe-9b63-50e5b2f31012
 filepath = abspath(joinpath(@__DIR__, "..", "MAT Files", "$Location.mat"))
@@ -87,7 +87,8 @@ vars_gt = matread(gt_filepath)
 # ╔═╡ 156d323f-f5e5-43c6-baeb-12ced16c2aec
 loc_dict_keys = Dict(
 	"Pavia" => ("pavia", "pavia_gt"),
-	"PaviaUni" => ("paviaU", "paviaU_gt")
+	"PaviaUni" => ("paviaU", "paviaU_gt"),
+	"Salinas" => ("salinas_corrected", "salinas_gt")
 )
 
 # ╔═╡ 8a1c8a30-0f9a-400a-ac34-1cdafde6e7ee
@@ -174,7 +175,7 @@ md"""
 """
 
 # ╔═╡ b3b7e9ef-813e-48b2-94fc-c72869744b09
-model = fit(data[mask, :]', K)
+# model = fit(data[mask, :]', K)
 
 # ╔═╡ 5b187ae4-8ef9-4578-b5bd-e0cdb4ef9aea
 md"""
@@ -182,7 +183,7 @@ md"""
 """
 
 # ╔═╡ db785f7e-6a3b-4e3a-a10b-a1814c70d44c
-subspace_basis = model.U
+# subspace_basis = model.U
 
 # ╔═╡ 00175646-2cff-415d-966b-afc46220f971
 md"""
@@ -190,7 +191,17 @@ md"""
 """
 
 # ╔═╡ c54875bf-7bfc-4993-98f5-0753fed6a907
-labels = model.c
+# labels = model.c
+
+# ╔═╡ f775a742-ad10-44a3-ba8e-a0637a11a000
+@bind maxiters PlutoUI.Slider(100:200; show_value=true, default=100)
+
+# ╔═╡ 3f4cb260-a0e2-4475-a931-da8f1169b1dd
+labels = cache(joinpath(CACHEDIR, "KAS_$(Location)_$(maxiters)_labels.bson")) do
+    model = fit(data[mask, :]', K; maxiters=maxiters)
+
+    model.c
+end
 
 # ╔═╡ 3ee3dbdd-0050-4ee9-962c-109d16cba65b
 md"""
@@ -198,7 +209,7 @@ md"""
 """
 
 # ╔═╡ fef765ab-de21-49b8-8e39-e2a11d965a18
-totalcost = model.totalcost
+# totalcost = model.totalcost
 
 # ╔═╡ 11d85411-904f-4626-b3a0-1b2e3ebef362
 md"""
@@ -206,7 +217,7 @@ md"""
 """
 
 # ╔═╡ 6b74369b-5bc4-48bf-b94e-cc7d6f19816c
-converged = model.converged
+# converged = model.converged
 
 # ╔═╡ 52e2ac37-023d-4d99-bb32-07ac36bc3606
 md"""
@@ -214,7 +225,7 @@ md"""
 """
 
 # ╔═╡ 22962796-594e-463b-ac23-ff6be3f669ae
-counts = model.counts
+# counts = model.counts
 
 # ╔═╡ c81b00d8-9771-4f3a-adc4-faaeb908d728
 md"""
@@ -246,7 +257,20 @@ relabel_maps = Dict(
 	7 => 4,
 	8 => 2,
 	9 => 7,
+),
+	"Salinas" => Dict(
+	0 => 0,
+	1 => 5,
+	2 => 8,
+	3 => 3,
+	4 => 9,
+	5 => 1,
+	6 => 6,
+	7 => 4,
+	8 => 2,
+	9 => 7,
 )
+	
 )
 
 # ╔═╡ 40b0c793-dd34-4707-879d-65abc28f37ec
@@ -311,7 +335,7 @@ end
 # ╠═809d8618-b089-491e-a15d-6aae3a68cf70
 # ╠═a07edf2a-09c0-4177-9ca7-cb80eba042be
 # ╠═9b43c42e-2479-477d-af73-b4888ffee575
-# ╠═b01e4773-fe99-493e-819c-e113173a3ed5
+# ╟─b01e4773-fe99-493e-819c-e113173a3ed5
 # ╠═d9e95bbe-d34b-4edc-9d1d-57c0be5679b0
 # ╠═dff09346-864d-4cf7-b591-fe1dd2773e0a
 # ╠═b9779add-a9ec-4835-850c-0d2aab39d1c9
@@ -319,21 +343,23 @@ end
 # ╠═dd843d8a-db29-42cc-850d-3ac1e7727459
 # ╠═4d193f05-1ab4-4308-9074-4d1f779a9645
 # ╠═3d1f2541-fd65-4640-9d63-9f5dddeff30e
-# ╠═c949586a-bb46-4b85-aa24-0d989190f46e
+# ╟─c949586a-bb46-4b85-aa24-0d989190f46e
 # ╠═b3b7e9ef-813e-48b2-94fc-c72869744b09
-# ╠═5b187ae4-8ef9-4578-b5bd-e0cdb4ef9aea
+# ╟─5b187ae4-8ef9-4578-b5bd-e0cdb4ef9aea
 # ╠═db785f7e-6a3b-4e3a-a10b-a1814c70d44c
-# ╠═00175646-2cff-415d-966b-afc46220f971
+# ╟─00175646-2cff-415d-966b-afc46220f971
 # ╠═c54875bf-7bfc-4993-98f5-0753fed6a907
-# ╠═3ee3dbdd-0050-4ee9-962c-109d16cba65b
+# ╠═f775a742-ad10-44a3-ba8e-a0637a11a000
+# ╠═3f4cb260-a0e2-4475-a931-da8f1169b1dd
+# ╟─3ee3dbdd-0050-4ee9-962c-109d16cba65b
 # ╠═fef765ab-de21-49b8-8e39-e2a11d965a18
-# ╠═11d85411-904f-4626-b3a0-1b2e3ebef362
+# ╟─11d85411-904f-4626-b3a0-1b2e3ebef362
 # ╠═6b74369b-5bc4-48bf-b94e-cc7d6f19816c
-# ╠═52e2ac37-023d-4d99-bb32-07ac36bc3606
+# ╟─52e2ac37-023d-4d99-bb32-07ac36bc3606
 # ╠═22962796-594e-463b-ac23-ff6be3f669ae
-# ╠═c81b00d8-9771-4f3a-adc4-faaeb908d728
+# ╟─c81b00d8-9771-4f3a-adc4-faaeb908d728
 # ╠═d76866f6-b71f-4158-8163-977c111024b0
 # ╠═40b0c793-dd34-4707-879d-65abc28f37ec
 # ╠═baa6acb7-6fb8-4c84-8d61-5cb32ff19744
-# ╠═77166d97-f79b-45da-a630-e3d18eb8a35a
+# ╟─77166d97-f79b-45da-a630-e3d18eb8a35a
 # ╠═e635ae66-7cdc-43af-9a77-513a3883e008
