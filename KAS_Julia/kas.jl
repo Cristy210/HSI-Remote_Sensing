@@ -162,7 +162,7 @@ function kas(
             zeros(float(eltype(X)), size(X, 1)),
         ) for di in d
     ],
-    showprogress::Bool = false,
+    showprogress::Bool = true,
 ) where {TUb<:Union{AbstractFloat,Complex{<:AbstractFloat}}}
     # Unpack the initial affine space basis matrices and bias vectors
     Uinit = first.(init)
