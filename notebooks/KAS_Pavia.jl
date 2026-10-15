@@ -164,7 +164,7 @@ with_theme() do
 end
 
 # ╔═╡ 4d193f05-1ab4-4308-9074-4d1f779a9645
-K = [1, 1, 1, 1, 1, 1, 1, 1, 1]
+K = [1, 0, 1, 1, 1, 1, 1, 1, 1]
 
 # ╔═╡ 3d1f2541-fd65-4640-9d63-9f5dddeff30e
 # data[mask, :]
@@ -194,7 +194,7 @@ md"""
 # labels = model.c
 
 # ╔═╡ f775a742-ad10-44a3-ba8e-a0637a11a000
-@bind maxiters PlutoUI.Slider(100:200; show_value=true, default=100)
+@bind maxiters PlutoUI.Slider(95:200; show_value=true, default=100)
 
 # ╔═╡ 3f4cb260-a0e2-4475-a931-da8f1169b1dd
 labels = cache(joinpath(CACHEDIR, "KAS_$(Location)_$(maxiters)_labels.bson")) do
